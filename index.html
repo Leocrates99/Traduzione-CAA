@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Editor Tavola CAA</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --tw:108px;--tes:34px;
+  --bg:#EEF0F5;--fg:#1a1a2e;
+  --gbg:#FFFDE7;--gc:#F9A825;
+  --abg:#FFF8E1;--ac:#EF6C00;
+  --vebg:#F1F8E9;--vec:#388E3C;
+  --bbg:#E3F2FD;--bc:#1565C0;
+  --vibg:#F3E5F5;--vic:#7B1FA2;
+  --rbg:#FCE4EC;--rc:#C2185B;
+  --grbg:#F5F5F5;--grc:#9E9E9E;
+  --r:12px;--sh:0 2px 8px rgba(0,0,0,.1);
+}
+@media(max-width:479px){:root{--tw:74px;--tes:26px;}}
+@media(min-width:480px) and (max-width:767px){:root{--tw:88px;--tes:30px;}}
+@media(min-width:768px) and (max-width:1023px){:root{--tw:96px;--tes:32px;}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;color:var(--fg);}
+button,input{font-family:inherit;}button{cursor:pointer;}
+.topbar{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid #e0e3e8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.tb-left{display:flex;align-items:center;gap:8px;}
+.tb-logo{font-size:20px;}
+.tb-title{font-size:13px;font-weight:800;letter-spacing:.3px;}
+.tb-right{display:flex;gap:6px;flex-wrap:wrap;}
+.btn{border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:11px;letter-spacing:.4px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-blue{background:#1a73e8;color:#fff;}
+.btn-blue:hover{background:#1557b0;}
+.btn-vi{background:#6a1b9a;color:#fff;}
+.btn-vi:hover{background:#4a148c;}
+.btn-gr{background:#2e7d32;color:#fff;}
+.btn-gr:hover{background:#1b5e20;}
+.btn-out{background:#fff;color:#555;border:1.5px solid #ddd;}
+.btn-out:hover{border-color:#1a73e8;color:#1a73e8;}
+.btn-ok{background:#388E3C!important;}
+.doc-hdr{padding:18px 14px 6px;text-align:center;}
+.doc-ttl-wrap{display:inline-flex;align-items:center;gap:7px;background:#fff;border-radius:10px;padding:7px 16px;box-shadow:var(--sh);cursor:pointer;}
+.doc-ttl-wrap span{font-weight:800;font-size:13px;letter-spacing:.8px;text-transform:uppercase;}
+.doc-ttl-inp{text-align:center;font-size:13px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;border:2px solid #1a73e8;border-radius:8px;padding:7px 14px;width:100%;max-width:440px;background:#fff;}
+.legenda{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;padding:8px 14px 14px;}
+.lchip{font-size:9.5px;font-weight:800;border-radius:20px;padding:3px 9px;letter-spacing:.2px;}
+.nlist{padding:0 12px;}
+.ncard{background:#fff;border-radius:14px;padding:14px 12px 16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.07);}
+.nhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.nhdr-l{display:flex;align-items:center;gap:7px;}
+.nidx{background:var(--bg);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;color:#999;letter-spacing:.8px;}
+.nttl-s{font-size:11px;font-weight:800;color:#666;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;}
+.nttl-i{font-size:11px;font-weight:800;color:#444;letter-spacing:.5px;text-transform:uppercase;border:1.5px solid #1a73e8;border-radius:5px;padding:3px 7px;}
+.nactn{display:flex;gap:4px;}
+.trow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.tile{width:var(--tw);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;user-select:none;}
+.tile:hover{transform:translateY(-2px);}
+.tile.sel{box-shadow:0 0 0 3px #1a73e8,0 6px 20px rgba(26,115,232,.22);transform:translateY(-5px) scale(1.04)!important;}
+.te{background:#fff;padding:10px 6px 8px;text-align:center;font-size:var(--tes);min-height:56px;display:flex;align-items:center;justify-content:center;line-height:1;}
+.tl{padding:5px 4px;text-align:center;font-weight:800;font-size:8.5px;color:#fff;text-transform:uppercase;letter-spacing:.5px;line-height:1.3;min-height:26px;display:flex;align-items:center;justify-content:center;}
+.tile-add{width:var(--tw);height:82px;border-radius:var(--r);border:2px dashed #d0d5dd;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c0c8d4;font-size:22px;gap:2px;flex-shrink:0;transition:all .15s;}
+.tile-add:hover{background:#f0f4ff;border-color:#1a73e8;color:#1a73e8;}
+.tile.giallo .te{background:var(--gbg);} .tile.giallo .tl{background:var(--gc);}
+.tile.arancio .te{background:var(--abg);} .tile.arancio .tl{background:var(--ac);}
+.tile.verde .te{background:var(--vebg);} .tile.verde .tl{background:var(--vec);}
+.tile.blu .te{background:var(--bbg);} .tile.blu .tl{background:var(--bc);}
+.tile.viola .te{background:var(--vibg);} .tile.viola .tl{background:var(--vic);}
+.tile.rosa .te{background:var(--rbg);} .tile.rosa .tl{background:var(--rc);}
+.tile.grigio .te{background:var(--grbg);} .tile.grigio .tl{background:var(--grc);}
+.add-n-btn{width:100%;background:#fff;border:2px dashed #c8cdd5;color:#9aa0ac;border-radius:14px;padding:12px;font-size:13px;font-weight:800;letter-spacing:.5px;margin-bottom:80px;transition:all .15s;}
+.add-n-btn:hover{border-color:#1a73e8;color:#1a73e8;}
+.ibtn{background:#f3f4f6;color:#555;border:none;border-radius:7px;padding:6px 10px;font-size:13px;transition:background .15s;}
+.ibtn:hover{background:#e8eaed;}
+.ibtn:disabled{opacity:.4;cursor:not-allowed;}
+.ibtn.d{background:#fff0f0;color:#c62828;}
+.ibtn.d:hover{background:#ffcdd2;}
+.epanel{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -6px 32px rgba(0,0,0,.13);padding:16px;z-index:300;max-height:82vh;overflow-y:auto;transition:transform .28s cubic-bezier(.34,1.56,.64,1);}
+.epanel.hide{transform:translateY(110%);}
+.epanel.show{transform:translateY(0);}
+.ep-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.ep-hdr strong{font-size:13px;letter-spacing:.3px;}
+.ep-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+.ep-prev{width:74px;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.12);flex-shrink:0;}
+.ep-prev .te{min-height:52px;font-size:28px;}
+.ep-prev .tl{font-size:8px;min-height:24px;}
+.ep-prev.giallo .te{background:var(--gbg);} .ep-prev.giallo .tl{background:var(--gc);}
+.ep-prev.arancio .te{background:var(--abg);} .ep-prev.arancio .tl{background:var(--ac);}
+.ep-prev.verde .te{background:var(--vebg);} .ep-prev.verde .tl{background:var(--vec);}
+.ep-prev.blu .te{background:var(--bbg);} .ep-prev.blu .tl{background:var(--bc);}
+.ep-prev.viola .te{background:var(--vibg);} .ep-prev.viola .tl{background:var(--vic);}
+.ep-prev.rosa .te{background:var(--rbg);} .ep-prev.rosa .tl{background:var(--rc);}
+.ep-prev.grigio .te{background:var(--grbg);} .ep-prev.grigio .tl{background:var(--grc);}
+.fgrp{flex:1;display:flex;flex-direction:column;gap:8px;}
+.flbl{font-size:9.5px;font-weight:800;color:#888;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;}
+.finp{width:100%;border:1.5px solid #e0e3e8;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;outline:none;transition:border-color .15s;background:#fff;}
+.finp:focus{border-color:#1a73e8;}
+.erow{display:flex;gap:6px;align-items:center;}
+.emoji-inp{width:58px;text-align:center;font-size:22px;}
+.epk-btn{flex:1;background:#EEF0F5;color:#555;border:none;border-radius:8px;padding:8px;font-size:11px;font-weight:800;transition:all .18s;white-space:nowrap;}
+.epk-btn.open{background:#1a73e8;color:#fff;}
+.picker{background:#f8f9fc;border-radius:12px;border:1px solid #e8eaed;overflow:hidden;margin-top:10px;}
+.pk-search{padding:8px 10px 6px;border-bottom:1px solid #e8eaed;background:#fff;}
+.pk-si{display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:8px;padding:5px 10px;}
+.pk-si input{flex:1;border:none;background:transparent;font-size:12px;outline:none;color:#333;}
+.pk-tabs{display:flex;overflow-x:auto;padding:5px 7px 0;gap:3px;background:#fff;border-bottom:1px solid #e8eaed;scrollbar-width:none;}
+.pk-tabs::-webkit-scrollbar{display:none;}
+.pk-tab{background:transparent;border:none;border-radius:8px 8px 0 0;padding:5px 8px;font-size:18px;flex-shrink:0;cursor:pointer;transition:background .15s;}
+.pk-tab.on{background:#1a73e8;}
+.pk-grid{padding:8px 10px 6px;max-height:145px;overflow-y:auto;}
+.pk-inner{display:flex;flex-wrap:wrap;gap:4px;}
+.pk-e{width:40px;height:40px;font-size:22px;background:#fff;border:1px solid #e8eaed;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;flex-shrink:0;padding:0;}
+.pk-e:hover{transform:scale(1.2);border-color:#1a73e8;}
+.pk-e.cur{border-color:#1a73e8;background:#e8f0fe;}
+.pk-hint{text-align:center;font-size:9px;color:#bbb;padding:2px 8px 8px;letter-spacing:.3px;}
+.pk-empty{text-align:center;color:#aaa;font-size:12px;padding:16px 0;}
+.csel{margin-top:12px;}
+.cchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.cchip{border-radius:8px;padding:5px 10px;font-size:10px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.sptxt{color:#fff;font-size:14px;font-weight:700;letter-spacing:.5px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:10000;pointer-events:none;animation:tin .3s ease;}
+@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:#fff;border-radius:16px;padding:20px;max-width:440px;width:100%;max-height:80vh;overflow-y:auto;}
+.modal h3{font-size:15px;font-weight:800;margin-bottom:10px;}
+.modal p{font-size:12px;color:#666;margin-bottom:10px;line-height:1.5;}
+.modal textarea{width:100%;height:110px;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:11px;font-family:monospace;resize:vertical;}
+.modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end;}
+/* print zone */
+#pz{position:absolute;left:-9999px;top:0;width:760px;padding:30px 22px;background:#F2F2F0;font-family:Arial,sans-serif;}
+.pz-doc-ttl{text-align:center;font-size:13px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px;}
+.pz-leg{text-align:center;font-size:9.5px;color:#888;margin-bottom:30px;line-height:1.8;}
+.pz-n{margin-bottom:34px;}
+.pz-nt{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:11px;}
+.pz-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.pz-tile{width:108px;border-radius:12px;overflow:hidden;}
+.pz-te{background:#fff;padding:13px 7px 9px;text-align:center;font-size:34px;min-height:66px;display:flex;align-items:center;justify-content:center;}
+.pz-tl{padding:6px 4px;text-align:center;font-weight:800;font-size:9px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.3;min-height:30px;display:flex;align-items:center;justify-content:center;}
+.pz-tile.giallo .pz-te{background:#FFFDE7;} .pz-tile.giallo .pz-tl{background:#F9A825;}
+.pz-tile.arancio .pz-te{background:#FFF8E1;} .pz-tile.arancio .pz-tl{background:#EF6C00;}
+.pz-tile.verde .pz-te{background:#F1F8E9;} .pz-tile.verde .pz-tl{background:#388E3C;}
+.pz-tile.blu .pz-te{background:#E3F2FD;} .pz-tile.blu .pz-tl{background:#1565C0;}
+.pz-tile.viola .pz-te{background:#F3E5F5;} .pz-tile.viola .pz-tl{background:#7B1FA2;}
+.pz-tile.rosa .pz-te{background:#FCE4EC;} .pz-tile.rosa .pz-tl{background:#C2185B;}
+.pz-tile.grigio .pz-te{background:#F5F5F5;} .pz-tile.grigio .pz-tl{background:#9E9E9E;}
+@media(min-width:768px){.nlist{max-width:860px;margin:0 auto;} .doc-hdr{padding:24px 20px 8px;}}
+@media print{body{background:#fff;} #pz{position:static;width:100%;padding:20px;} .topbar,.nlist,.doc-hdr,.legenda,.epanel{display:none!important;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Loading -->
+  <div v-if="loading" class="overlay">
+    <div class="spinner"></div>
+    <div class="sptxt">{{ loadMsg }}</div>
+  </div>
+
+  <!-- Toast -->
+  <div v-if="toast" class="toast">{{ toast }}</div>
+
+  <!-- Import modal -->
+  <div v-if="showImp" class="modal-bg" @click.self="showImp=false">
+    <div class="modal">
+      <h3>📥 Importa dati JSON</h3>
+      <p>Incolla qui i dati esportati con il pulsante 📤, poi premi Importa.</p>
+      <textarea v-model="impTxt" placeholder='{"title":"...","nuclei":[...]}'></textarea>
+      <div class="modal-btns">
+        <button class="btn btn-out" style="font-size:11px;padding:7px 12px;" @click="showImp=false">Annulla</button>
+        <button class="btn btn-blue" style="font-size:11px;padding:7px 12px;" @click="doImport">Importa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="tb-left">
+      <span class="tb-logo">🗂️</span>
+      <span class="tb-title">Editor Tavola CAA</span>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-out" @click="showImp=true" title="Importa dati">📥</button>
+      <button class="btn btn-out" @click="doExpJSON" title="Esporta dati">📤</button>
+      <button class="btn btn-gr"  @click="doSaveHTML">💾 Condividi</button>
+      <button :class="['btn','btn-vi',pdfFlash?'btn-ok':'']" @click="doExpPDF">
+        {{ pdfFlash?'✅ PDF!':'📄 PDF' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- Titolo documento -->
+  <div class="doc-hdr">
+    <div v-if="!editTtl" class="doc-ttl-wrap" @click="editTtl=true" title="Clicca per modificare">
+      <span>{{ data.title }}</span><span style="font-size:12px;color:#bbb;">✏️</span>
+    </div>
+    <input v-else class="doc-ttl-inp" v-model="data.title" @blur="editTtl=false" @keydown.enter="editTtl=false" autofocus>
+    <div class="legenda">
+      <span v-for="(c,k) in FIT" :key="k" class="lchip"
+        :style="{background:c.bg,color:c.lbl,borderColor:c.lbl+'44',border:'1px solid'}">
+        {{ c.dot }} {{ c.name }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Nuclei -->
+  <div class="nlist">
+    <div v-for="(n,ni) in data.nuclei" :key="n.id" class="ncard">
+      <div class="nhdr">
+        <div class="nhdr-l">
+          <span class="nidx">F{{ ni+1 }}</span>
+          <input v-if="editN===n.id" class="nttl-i" v-model="n.title"
+            @blur="editN=null" @keydown.enter="editN=null" autofocus>
+          <span v-else class="nttl-s" @click="editN=n.id" title="Rinomina frase">
+            {{ n.title }} <span style="color:#ccc;font-weight:400;">✏️</span>
+          </span>
+        </div>
+        <div class="nactn">
+          <button class="ibtn" @click="moveN(n.id,-1)" :disabled="ni===0">↑</button>
+          <button class="ibtn" @click="moveN(n.id,1)" :disabled="ni===data.nuclei.length-1">↓</button>
+          <button class="ibtn d" @click="delN(n.id)" :disabled="data.nuclei.length===1">🗑</button>
+        </div>
+      </div>
+      <div class="trow">
+        <div v-for="t in n.tiles" :key="t.id" data-tile
+          :class="['tile',t.c,{sel:sel&&sel.nid===n.id&&sel.tid===t.id}]"
+          @click="selTile(n.id,t.id)">
+          <div class="te">{{ t.e }}</div>
+          <div class="tl">{{ t.w }}</div>
+        </div>
+        <div class="tile-add" @click="addTile(n.id)" title="Aggiungi tessera">
+          <span style="line-height:1">＋</span>
+          <span style="font-size:8px;font-weight:800;letter-spacing:.6px">TESSERA</span>
+        </div>
+      </div>
+    </div>
+    <button class="add-n-btn" @click="addN">＋ Aggiungi frase</button>
+  </div>
+
+  <!-- Pannello modifica -->
+  <div :class="['epanel', sel?'show':'hide']" ref="panelRef">
+    <template v-if="selT">
+      <div class="ep-hdr">
+        <strong>✏️ Modifica tessera</strong>
+        <div style="display:flex;gap:6px;">
+          <button class="ibtn" @click="movT(-1)">◀</button>
+          <button class="ibtn" @click="movT(1)">▶</button>
+          <button class="ibtn d" @click="delT">🗑</button>
+          <button class="ibtn" @click="closePan">✕</button>
+        </div>
+      </div>
+      <div class="ep-row">
+        <div :class="['ep-prev',selT.c]">
+          <div class="te" style="min-height:52px;font-size:28px;">{{ selT.e }}</div>
+          <div class="tl" style="font-size:8px;min-height:24px;">{{ selT.w }}</div>
+        </div>
+        <div class="fgrp">
+          <div>
+            <div class="flbl">Parola</div>
+            <input class="finp" :value="selT.w" @input="upd('w',$event.target.value)" placeholder="Es: ama">
+          </div>
+          <div>
+            <div class="flbl">Emoji pittogramma</div>
+            <div class="erow">
+              <input class="finp emoji-inp" :value="selT.e" @input="upd('e',$event.target.value)">
+              <button :class="['epk-btn',showPk?'open':'']" @click="showPk=!showPk">
+                {{ showPk?'▲ Chiudi':'🔍 Scegli emoji' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selettore emoji -->
+      <div v-if="showPk" class="picker">
+        <div class="pk-search">
+          <div class="pk-si">
+            <span style="font-size:14px">🔍</span>
+            <input v-model="pkQ" placeholder="Cerca… es: sole, cuore, casa">
+            <span v-if="pkQ" @click="pkQ=''" style="cursor:pointer;color:#aaa;font-size:14px;">✕</span>
+          </div>
+        </div>
+        <div v-if="!pkQ" class="pk-tabs">
+          <button v-for="cat in eCats" :key="cat" :class="['pk-tab',pkCat===cat?'on':'']"
+            @click="pkCat=cat" :title="cat.slice(cat.indexOf(' ')+1)">
+            {{ cat.split(' ')[0] }}
+          </button>
+        </div>
+        <div class="pk-grid">
+          <div v-if="pkList.length===0" class="pk-empty">Nessun risultato per "{{ pkQ }}"</div>
+          <div v-else class="pk-inner">
+            <button v-for="(em,i) in pkList" :key="i" :class="['pk-e',em===selT.e?'cur':'']"
+              @click="pickE(em)" :title="em">{{ em }}</button>
+          </div>
+        </div>
+        <div class="pk-hint">Tocca un'emoji per inserirla &nbsp;·&nbsp; Puoi anche incollarla nel campo sopra</div>
+      </div>
+
+      <!-- Colori Fitzgerald -->
+      <div class="csel">
+        <div class="flbl">Categoria Fitzgerald</div>
+        <div class="cchips">
+          <button v-for="(c,k) in FIT" :key="k" class="cchip"
+            :style="{background:selT.c===k?c.lbl:c.bg,color:selT.c===k?'#fff':c.lbl,
+              borderColor:c.lbl,boxShadow:selT.c===k?'0 2px 8px '+c.lbl+'55':'none'}"
+            @click="upd('c',k)">
+            {{ c.dot }} {{ c.name }}
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Zona di stampa (nascosta) -->
+<div id="pz">
+  <div id="pz-ttl" class="pz-doc-ttl"></div>
+  <div class="pz-leg">🟡 sostantivo &nbsp;·&nbsp; 🟠 nome proprio &nbsp;·&nbsp; 🟢 verbo &nbsp;·&nbsp; 🔵 agg/avv &nbsp;·&nbsp; 🟣 tempo &nbsp;·&nbsp; 🩷 cong. &nbsp;·&nbsp; ⬜ funzionale</div>
+  <div id="pz-body"></div>
+</div>
+
+<!-- Dati correnti (sostituiti al salvataggio) -->
+<script id="caa-data" type="application/json">
+{"title":"San Francesco d\u2019Assisi","nuclei":[{"id":1,"title":"Identit\u00e0","tiles":[{"id":1,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":2,"e":"\ud83d\udff0","w":"\u00e8","c":"verde"},{"id":3,"e":"\u271d\ufe0f","w":"santo","c":"giallo"},{"id":4,"e":"\u2b50","w":"importante","c":"blu"}]},{"id":2,"title":"Come viene chiamato","tiles":[{"id":5,"e":"\ud83d\udc65","w":"alcuni","c":"grigio"},{"id":6,"e":"\ud83d\udde3\ufe0f","w":"chiamano","c":"verde"},{"id":7,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":8,"e":"\u2194\ufe0f","w":"come","c":"grigio"},{"id":9,"e":"\u271d\ufe0f","w":"Ges\u00f9 Cristo","c":"arancio"}]},{"id":3,"title":"800 anni dalla morte","tiles":[{"id":10,"e":"\u231b","w":"sono passati","c":"verde"},{"id":11,"e":"\ud83d\udcc5","w":"800 anni","c":"viola"},{"id":12,"e":"\ud83d\udc80","w":"morte","c":"giallo"},{"id":13,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"}]},{"id":4,"title":"Vita semplice","tiles":[{"id":14,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":15,"e":"\u2764\ufe0f","w":"ama","c":"verde"},{"id":16,"e":"\ud83c\udf31","w":"vita","c":"giallo"},{"id":17,"e":"\ud83c\udf43","w":"semplice","c":"blu"}]},{"id":5,"title":"Silenzio e natura","tiles":[{"id":18,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":19,"e":"\u2764\ufe0f","w":"ama","c":"verde"},{"id":20,"e":"\ud83e\udd2b","w":"silenzio","c":"giallo"},{"id":21,"e":"\u2795","w":"e","c":"rosa"},{"id":22,"e":"\ud83c\udf3f","w":"natura","c":"giallo"}]},{"id":6,"title":"Eremo delle Carceri","tiles":[{"id":23,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":24,"e":"\ud83c\udfe0","w":"vive","c":"verde"},{"id":25,"e":"\u26e9\ufe0f","w":"Eremo delle Carceri","c":"arancio"}]},{"id":7,"title":"Aiuta gli altri","tiles":[{"id":26,"e":"\u2194\ufe0f","w":"per\u00f2","c":"rosa"},{"id":27,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":28,"e":"\ud83e\udd1d","w":"aiuta","c":"verde"},{"id":29,"e":"\ud83d\udc65","w":"altri","c":"giallo"}]}]}
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════
+   DIZIONARIO EMOJI — tutte le categorie Unicode
+═══════════════════════════════════════════════ */
+const EMOJIS = {
+"😀 Emozioni e stati":[
+"😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"
+],
+"👋 Gesti e mani":[
+"👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🫀","🫁","🧠","🦷","🦴","👀","👁️","👅","👄","🫦"
+],
+"👤 Persone e ruoli":[
+"👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🧏","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","🥷","👷","🫅","🤴","👸","👳","👲","🧕","🤵","👰","🤰","🫃","🫄","🤱","👼","🎅","🤶","🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🎓","👨‍🎓","👩‍🎓","🧑‍🏫","👨‍🏫","👩‍🏫","🧑‍⚖️","👨‍⚖️","👩‍⚖️","🧑‍🌾","👨‍🌾","👩‍🌾","🧑‍🍳","👨‍🍳","👩‍🍳","🧑‍🔧","👨‍🔧","👩‍🔧","🧑‍🎨","👨‍🎨","👩‍🎨","🧑‍✈️","👨‍✈️","👩‍✈️","🧑‍💼","👨‍💼","👩‍💼","🧑‍🔬","👨‍🔬","👩‍🔬","🧑‍💻","👨‍💻","👩‍💻","🧙","🦸","🦹","🧚","🧜","🧝","🧞","🧟","🧌","🦊","👯","🕴️","👫","👬","👭","💑","💏","👨‍👩‍👦","👨‍👩‍👧","👪","👥","👤","🫂","🪖","⚔️","🕊️"
+],
+"🐶 Animali":[
+"🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐔","🐧","🐦","🐦‍⬛","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🫎","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪲","🦟","🦗","🪳","🕷️","🦂","🐢","🐍","🦎","🦖","🦕","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🫏","🐕","🐕‍🦺","🦮","🐩","🐈","🐈‍⬛","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔","🐾","🐉","🐲","🦑","🐙","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🪸","🪼","🐚","🌊"
+],
+"🌱 Natura e piante":[
+"🌵","🌲","🌳","🌴","🪵","🌱","🌿","☘️","🍀","🎍","🪴","🎋","🍃","🍂","🍁","🍄","🌾","💐","🌷","🌹","🥀","🪷","🌺","🌸","🌼","🌻","🌞","⭐","🌟","✨","💫","⚡","☄️","💥","🔥","🌈","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️","⛄","🌬️","💨","🌪️","🌫️","🌊","💧","💦","🫧","🌀","🌈","🏔️","⛰️","🌋","🗻","🏕️","🏖️","🏜️","🏝️","🏞️","🌍","🌎","🌏","🌐","🌕","🌖","🌗","🌘","🌑","🌒","🌓","🌔","🌙","🌛","🌜","🌚","🪐","💫","🌠","🌌"
+],
+"🍎 Cibo e bevande":[
+"🍏","🍎","🍐","🍊","🍋","🍋‍🟩","🍌","🍉","🍇","🍓","🫐","🍈","🍑","🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🧄","🧅","🥔","🌽","🥕","🫛","🧆","🥜","🫘","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🦴","🌭","🍔","🍟","🍕","🫔","🌮","🌯","🥙","🧆","🍜","🍝","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚","🍘","🍥","🥮","🍢","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🍩","🍪","🌰","🥜","🫘","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🫗","🥃","🍸","🍹","🍾","🧊","💧","🥛","🍼","🫖"
+],
+"✈️ Trasporti":[
+"🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🏍️","🛵","🛺","🚲","🛴","🛹","🛼","🚏","🛣️","🗺️","⛽","🚦","🚥","🚧","⚓","🛟","⛵","🚤","🛥️","🛳️","⛴️","🚢","✈️","🛩️","🛫","🛬","🪂","💺","🚁","🛸","🚀","🛶","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚋","🚌","🚍","🚎","🏎️","🚐","🚑","🚒","🚓","🚔","🚕","🚖","🚗","🚘","🚙","🚚","🚛","🚜","🚡","🚠","🚟","🚃","🛤️","🛣️","🗺️","🧭"
+],
+"🏠 Luoghi e edifici":[
+"🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩️","🏗️","🏘️","🏚️","🏙️","🌃","🌆","🌇","🌉","🌁","🌄","🌅","📍","📌","🗺️","🏕️","🏖️","🏜️","🏝️","🏞️","⛰️","🌋","🗻","🏔️","🌊","🏟️","🎡","🎢","🎠","⛲","⛺","🏕️","🪨","🌐"
+],
+"🎮 Attività e sport":[
+"⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🏓","🏸","🏒","🥍","🏑","🏏","🎳","🏹","🎣","🤿","🥊","🥋","⛳","🎿","🛷","🛹","🛼","🪃","🪁","🏋️","🤼","🤸","⛹️","🤺","🏇","🧘","🏌️","🏊","🚣","🧗","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖️","🎭","🎨","🖌️","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🪘","🥁","🎷","🎺","🎸","🪕","🎻","🪗","🎮","🕹️","🎲","🎯","🎪","🎠","🎡","🎢","🎭","🎨","🖼️","🎏","🎀","🎁","🎊","🎉","🎈"
+],
+"📚 Oggetti e strumenti":[
+"💻","🖥️","🖨️","⌨️","🖱️","💾","💿","📱","☎️","📞","📟","📠","📺","📻","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡","🔋","🪫","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💰","💳","💎","⚖️","🪝","🔧","🔨","⚒️","🛠️","⛏️","🔩","🪛","🔗","⛓️","🧲","🪜","🧰","🗑️","🔓","🔒","🔐","🗝️","🔑","🚪","🪟","🛋️","🪑","🛏️","🛁","🪠","🧴","🧷","🧹","🧺","🧻","🪣","🧼","🫧","🪥","🧽","🧹","🪒","✂️","🗃️","🗂️","🗄️","📥","📤","📦","📧","📝","✏️","✒️","🖊️","📓","📔","📒","📕","📗","📘","📙","📚","📖","🔖","🏷️","💵","🪙","💸","📊","📈","📉","📋","📌","📍","🗺️","🌐","🔬","🔭","🧪","🧫","🧬","💊","💉","🩸","🩹","🩺","🩻","🏥","🩼","🦽","🦼","🛒","🎒","👝","👛","👜","💼","🧳","🌂","☂️"
+],
+"✝️ Religione e cultura":[
+"✝️","☪️","✡️","☸️","☯️","✝️","☦️","🛐","🕉️","⛎","♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓","🔯","🪬","🧿","🕎","🔱","⚜️","🔰","♻️","☮️","🕊️","🙏","📿","⛪","🕌","🛕","🕍","⛩️","🧎","🪔","🕯️","📖","✝️👤","📖✝️","🏛️","🎭","🎨","🖼️","🎼","🎵","🎶","📜","🏺","🧿","🌍","🗺️","🌐"
+],
+"❤️ Cuori e sentimenti":[
+"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","💕","💞","💓","💗","💖","💘","💝","💟","🫀","💌","💋","💍","💒","🫶","🤝","🫂","👐","🙌","🤗","😍","🥰","😊","🌹","🌺","🌸","🎀","🎁","🌈","✨","⭐","💫","🌟","🕊️","☮️"
+],
+"⏰ Tempo e calendario":[
+"⏰","⌛","⏳","📅","📆","🗓️","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚","🕛","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦","🕧","⌚","🕰️","⏱️","⏲️","☀️","🌙","🌅","🌄","🌇","🌆","🌃","🌉","🌌","🌠","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌛","🌜","🌚","📅","⬅️","➡️","⏩","⏪","⏫","⏬","🔄","🔃","⏭️","⏮️"
+],
+"🔢 Simboli e segni":[
+"0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","💯","#️⃣","*️⃣","⬆️","⬇️","⬅️","➡️","↩️","↪️","⤴️","⤵️","🔄","🔃","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","⏸️","⏹️","⏺️","🔅","🔆","📶","📳","📴","🔇","🔈","🔉","🔊","📣","📢","🔔","🔕","🎵","🎶","✅","❎","➕","➖","✖️","➗","🟰","♾️","‼️","⁉️","❓","❔","❗","❕","〰️","⭕","❌","🚫","⛔","📵","🟢","🟡","🟠","🔴","⚫","⚪","🟣","🔵","🟤","🔶","🔷","🔸","🔹","🔺","🔻","▪️","▫️","◾","◽","◼️","◻️","⬛","⬜","🟥","🟧","🟨","🟩","🟦","🟪","🟫","🔲","🔳","⚡","🔥","💧","🌊","💨","⭐","💫","✨","🌟","💥","❄️","🌈"
+]
+};
+
+/* ═══════════════════════════════════════════════
+   FITZGERALD
+═══════════════════════════════════════════════ */
+const FIT = {
+  giallo:  {bg:"#FFFDE7",lbl:"#F9A825",name:"Sostantivo",  dot:"🟡"},
+  arancio: {bg:"#FFF8E1",lbl:"#EF6C00",name:"Nome proprio",dot:"🟠"},
+  verde:   {bg:"#F1F8E9",lbl:"#388E3C",name:"Verbo",       dot:"🟢"},
+  blu:     {bg:"#E3F2FD",lbl:"#1565C0",name:"Agg./Avv.",   dot:"🔵"},
+  viola:   {bg:"#F3E5F5",lbl:"#7B1FA2",name:"Tempo",       dot:"🟣"},
+  rosa:    {bg:"#FCE4EC",lbl:"#C2185B",name:"Cong.",       dot:"🩷"},
+  grigio:  {bg:"#F5F5F5",lbl:"#9E9E9E",name:"Funzionale",  dot:"⬜"},
+};
+
+/* ═══════════════════════════════════════════════
+   GENERATORE HTML STATICO
+═══════════════════════════════════════════════ */
+function buildStaticHTML(data) {
+  const rows = data.nuclei.map((n,i)=>{
+    const tiles = n.tiles.map(t=>
+      `<div class="tile ${t.c}"><div class="te">${t.e}</div><div class="tl">${t.w}</div></div>`
+    ).join('');
+    return `<div class="nucleus"><div class="nt">FRASE ${i+1} – ${n.title.toUpperCase()}</div><div class="row">${tiles}</div></div>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${data.title}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F2F2F0;padding:32px 24px}.dt{text-align:center;font-size:13px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px}.lg{text-align:center;font-size:10px;color:#888;margin-bottom:32px}.nucleus{margin-bottom:36px}.nt{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:12px}.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.tile{width:108px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-shrink:0}.te{background:#fff;padding:14px 8px 10px;text-align:center;font-size:36px;min-height:72px;display:flex;align-items:center;justify-content:center}.tl{padding:7px 5px;text-align:center;font-weight:800;font-size:9.5px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.3;min-height:32px;display:flex;align-items:center;justify-content:center}.giallo .te{background:#FFFDE7}.giallo .tl{background:#F9A825}.arancio .te{background:#FFF8E1}.arancio .tl{background:#EF6C00}.verde .te{background:#F1F8E9}.verde .tl{background:#388E3C}.blu .te{background:#E3F2FD}.blu .tl{background:#1565C0}.viola .te{background:#F3E5F5}.viola .tl{background:#7B1FA2}.rosa .te{background:#FCE4EC}.rosa .tl{background:#C2185B}.grigio .te{background:#F5F5F5}.grigio .tl{background:#9E9E9E}@media print{body{background:#fff;padding:16px}.tile{box-shadow:none;border:1px solid #ddd}}</style></head><body><div class="dt">${data.title}</div><div class="lg">🟡 sostantivo · 🟠 nome proprio · 🟢 verbo · 🔵 agg/avv · 🟣 tempo · 🩷 cong. · ⬜ funzionale</div>${rows}</body></html>`;
+}
+
+/* ═══════════════════════════════════════════════
+   VUE APP
+═══════════════════════════════════════════════ */
+let _id = 100;
+const uid = () => ++_id;
+const {createApp,ref,computed,reactive,nextTick} = Vue;
+
+createApp({
+  data(){
+    const raw = document.getElementById('caa-data').textContent;
+    const stored = JSON.parse(raw);
+    return {
+      data: stored,
+      sel: null,
+      showPk: false,
+      pkQ: '',
+      pkCat: Object.keys(EMOJIS)[0],
+      editTtl: false,
+      editN: null,
+      loading: false,
+      loadMsg: '',
+      toast: null,
+      pdfFlash: false,
+      showImp: false,
+      impTxt: '',
+    };
+  },
+  computed:{
+    FIT(){ return FIT; },
+    eCats(){ return Object.keys(EMOJIS); },
+    selT(){
+      if(!this.sel) return null;
+      const n = this.data.nuclei.find(n=>n.id===this.sel.nid);
+      return n?.tiles.find(t=>t.id===this.sel.tid)??null;
+    },
+    pkList(){
+      const q = this.pkQ.trim();
+      if(!q) return EMOJIS[this.pkCat]||[];
+      return Object.values(EMOJIS).flat().filter(e=>e.includes(q));
+    }
+  },
+  methods:{
+    selTile(nid,tid){
+      if(this.sel?.nid===nid&&this.sel?.tid===tid){this.sel=null;this.showPk=false;}
+      else{this.sel={nid,tid};this.showPk=false;}
+    },
+    closePan(){this.sel=null;this.showPk=false;},
+    upd(k,v){
+      if(!this.sel)return;
+      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
+      const t=n?.tiles.find(t=>t.id===this.sel.tid);
+      if(t)t[k]=v;
+    },
+    delT(){
+      if(!this.sel)return;
+      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
+      if(n)n.tiles=n.tiles.filter(t=>t.id!==this.sel.tid);
+      this.closePan();
+    },
+    movT(dir){
+      if(!this.sel)return;
+      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
+      if(!n)return;
+      const idx=n.tiles.findIndex(t=>t.id===this.sel.tid);
+      if(idx+dir<0||idx+dir>=n.tiles.length)return;
+      const a=[...n.tiles];[a[idx],a[idx+dir]]=[a[idx+dir],a[idx]];n.tiles=a;
+    },
+    addTile(nid){
+      const tid=uid();
+      const n=this.data.nuclei.find(n=>n.id===nid);
+      if(!n)return;
+      n.tiles.push({id:tid,e:"❓",w:"parola",c:"giallo"});
+      this.sel={nid,tid};this.showPk=false;
+    },
+    pickE(e){this.upd('e',e);this.showPk=false;},
+    moveN(nid,dir){
+      const a=this.data.nuclei;const idx=a.findIndex(n=>n.id===nid);
+      if(idx+dir<0||idx+dir>=a.length)return;
+      [a[idx],a[idx+dir]]=[a[idx+dir],a[idx]];
+    },
+    delN(nid){
+      if(this.data.nuclei.length===1)return;
+      this.data.nuclei=this.data.nuclei.filter(n=>n.id!==nid);
+      if(this.sel?.nid===nid)this.closePan();
+    },
+    addN(){
+      const nid=uid();const tid=uid();
+      this.data.nuclei.push({id:nid,title:"Nuova frase",tiles:[{id:tid,e:"❓",w:"parola",c:"giallo"}]});
+      this.sel={nid,tid};this.showPk=false;
+    },
+    outside(e){
+      if(!this.sel)return;
+      const p=this.$refs.panelRef;
+      if(!p?.contains(e.target)&&!e.target.closest('[data-tile]'))this.closePan();
+    },
+    showT(msg,ms=2500){
+      this.toast=msg;clearTimeout(this._tt);
+      this._tt=setTimeout(()=>{this.toast=null;},ms);
+    },
+    doExpJSON(){
+      const b=new Blob([JSON.stringify(this.data,null,2)],{type:'application/json'});
+      const u=URL.createObjectURL(b);const a=document.createElement('a');
+      a.href=u;a.download='dati_caa.json';a.click();URL.revokeObjectURL(u);
+      this.showT('📤 Dati JSON esportati!');
+    },
+    doImport(){
+      try{
+        const p=JSON.parse(this.impTxt);
+        if(!p.title||!Array.isArray(p.nuclei))throw new Error('Formato non valido');
+        this.data=p;this.showImp=false;this.impTxt='';this.closePan();
+        this.showT('📥 Importazione completata!');
+      }catch(e){alert('Errore: '+e.message);}
+    },
+    doSaveHTML(){
+      // Salva l'intera pagina con i dati aggiornati
+      const newData = JSON.stringify(this.data);
+      let html = document.documentElement.outerHTML;
+      // Replace the JSON in the script tag
+      html = html.replace(
+        /(<script id="caa-data" type="application\/json">)([\s\S]*?)(<\/script>)/,
+        `$1\n${newData}\n$3`
+      );
+      const b=new Blob([html],{type:'text/html'});
+      const u=URL.createObjectURL(b);const a=document.createElement('a');
+      a.href=u;a.download='editor_caa.html';a.click();URL.revokeObjectURL(u);
+      this.showT('💾 Editor salvato con i tuoi dati!');
+    },
+    buildPZ(){
+      document.getElementById('pz-ttl').textContent=this.data.title;
+      const body=document.getElementById('pz-body');body.innerHTML='';
+      this.data.nuclei.forEach((n,i)=>{
+        const nd=document.createElement('div');nd.className='pz-n';
+        const tt=document.createElement('div');tt.className='pz-nt';
+        tt.textContent=`FRASE ${i+1} – ${n.title.toUpperCase()}`;nd.appendChild(tt);
+        const rw=document.createElement('div');rw.className='pz-row';
+        n.tiles.forEach(t=>{
+          const td=document.createElement('div');td.className=`pz-tile ${t.c}`;
+          td.innerHTML=`<div class="pz-te">${t.e}</div><div class="pz-tl">${t.w}</div>`;
+          rw.appendChild(td);
+        });
+        nd.appendChild(rw);body.appendChild(nd);
+      });
+    },
+    async doExpPDF(){
+      if(typeof html2canvas==='undefined'||typeof window.jspdf==='undefined'){
+        this.showT('⚠️ Librerie non caricate. Ricarica la pagina.');return;
+      }
+      this.loading=true;this.loadMsg='Preparazione PDF…';
+      try{
+        this.buildPZ();
+        await nextTick();
+        const pz=document.getElementById('pz');
+        pz.style.left='0px';pz.style.visibility='hidden';
+        await new Promise(r=>setTimeout(r,300));
+        const canvas=await html2canvas(pz,{
+          scale:2,useCORS:true,backgroundColor:'#F2F2F0',logging:false,allowTaint:true
+        });
+        pz.style.left='-9999px';pz.style.visibility='visible';
+        const img=canvas.toDataURL('image/png');
+        const {jsPDF}=window.jspdf;
+        const W=210,H=297;
+        const cw=canvas.width/2,ch=canvas.height/2;
+        const mmW=cw*25.4/96,mmH=ch*25.4/96;
+        const scale=W/mmW;
+        const finalH=mmH*scale;
+        const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        if(finalH<=H){
+          doc.addImage(img,'PNG',0,0,W,finalH);
+        } else {
+          let off=0;
+          doc.addImage(img,'PNG',0,0,W,finalH);
+          let left=Math.ceil(finalH/H)-1;
+          off=H;
+          while(left>0){
+            doc.addPage();
+            doc.addImage(img,'PNG',0,-off,W,finalH);
+            off+=H;left--;
+          }
+        }
+        doc.save('tavola_caa.pdf');
+        this.pdfFlash=true;setTimeout(()=>this.pdfFlash=false,2500);
+        this.showT('📄 PDF scaricato!');
+      }catch(err){
+        console.error(err);
+        alert('Errore PDF. Prova con Ctrl+P → Salva come PDF.');
+      }finally{this.loading=false;}
+    }
+  },
+  mounted(){
+    document.addEventListener('mousedown',this.outside);
+  },
+  beforeUnmount(){
+    document.removeEventListener('mousedown',this.outside);
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
