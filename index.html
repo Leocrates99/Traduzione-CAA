@@ -2,604 +2,3305 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Editor Tavola CAA</title>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FAF7F2">
+<title>Atelier CAA — Comunicazione Aumentativa e Alternativa | Poetrify</title>
+
+<!-- Tipografia Poetrify -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Librerie applicative -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-:root{
-  --tw:108px;--tes:34px;
-  --bg:#EEF0F5;--fg:#1a1a2e;
-  --gbg:#FFFDE7;--gc:#F9A825;
-  --abg:#FFF8E1;--ac:#EF6C00;
-  --vebg:#F1F8E9;--vec:#388E3C;
-  --bbg:#E3F2FD;--bc:#1565C0;
-  --vibg:#F3E5F5;--vic:#7B1FA2;
-  --rbg:#FCE4EC;--rc:#C2185B;
-  --grbg:#F5F5F5;--grc:#9E9E9E;
-  --r:12px;--sh:0 2px 8px rgba(0,0,0,.1);
-}
-@media(max-width:479px){:root{--tw:74px;--tes:26px;}}
-@media(min-width:480px) and (max-width:767px){:root{--tw:88px;--tes:30px;}}
-@media(min-width:768px) and (max-width:1023px){:root{--tw:96px;--tes:32px;}}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;color:var(--fg);}
-button,input{font-family:inherit;}button{cursor:pointer;}
-.topbar{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid #e0e3e8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
-.tb-left{display:flex;align-items:center;gap:8px;}
-.tb-logo{font-size:20px;}
-.tb-title{font-size:13px;font-weight:800;letter-spacing:.3px;}
-.tb-right{display:flex;gap:6px;flex-wrap:wrap;}
-.btn{border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:11px;letter-spacing:.4px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
-.btn:active{transform:scale(.96);}
-.btn-blue{background:#1a73e8;color:#fff;}
-.btn-blue:hover{background:#1557b0;}
-.btn-vi{background:#6a1b9a;color:#fff;}
-.btn-vi:hover{background:#4a148c;}
-.btn-gr{background:#2e7d32;color:#fff;}
-.btn-gr:hover{background:#1b5e20;}
-.btn-out{background:#fff;color:#555;border:1.5px solid #ddd;}
-.btn-out:hover{border-color:#1a73e8;color:#1a73e8;}
-.btn-ok{background:#388E3C!important;}
-.doc-hdr{padding:18px 14px 6px;text-align:center;}
-.doc-ttl-wrap{display:inline-flex;align-items:center;gap:7px;background:#fff;border-radius:10px;padding:7px 16px;box-shadow:var(--sh);cursor:pointer;}
-.doc-ttl-wrap span{font-weight:800;font-size:13px;letter-spacing:.8px;text-transform:uppercase;}
-.doc-ttl-inp{text-align:center;font-size:13px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;border:2px solid #1a73e8;border-radius:8px;padding:7px 14px;width:100%;max-width:440px;background:#fff;}
-.legenda{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;padding:8px 14px 14px;}
-.lchip{font-size:9.5px;font-weight:800;border-radius:20px;padding:3px 9px;letter-spacing:.2px;}
-.nlist{padding:0 12px;}
-.ncard{background:#fff;border-radius:14px;padding:14px 12px 16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.07);}
-.nhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
-.nhdr-l{display:flex;align-items:center;gap:7px;}
-.nidx{background:var(--bg);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;color:#999;letter-spacing:.8px;}
-.nttl-s{font-size:11px;font-weight:800;color:#666;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;}
-.nttl-i{font-size:11px;font-weight:800;color:#444;letter-spacing:.5px;text-transform:uppercase;border:1.5px solid #1a73e8;border-radius:5px;padding:3px 7px;}
-.nactn{display:flex;gap:4px;}
-.trow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
-.tile{width:var(--tw);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;user-select:none;}
-.tile:hover{transform:translateY(-2px);}
-.tile.sel{box-shadow:0 0 0 3px #1a73e8,0 6px 20px rgba(26,115,232,.22);transform:translateY(-5px) scale(1.04)!important;}
-.te{background:#fff;padding:10px 6px 8px;text-align:center;font-size:var(--tes);min-height:56px;display:flex;align-items:center;justify-content:center;line-height:1;}
-.tl{padding:5px 4px;text-align:center;font-weight:800;font-size:8.5px;color:#fff;text-transform:uppercase;letter-spacing:.5px;line-height:1.3;min-height:26px;display:flex;align-items:center;justify-content:center;}
-.tile-add{width:var(--tw);height:82px;border-radius:var(--r);border:2px dashed #d0d5dd;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c0c8d4;font-size:22px;gap:2px;flex-shrink:0;transition:all .15s;}
-.tile-add:hover{background:#f0f4ff;border-color:#1a73e8;color:#1a73e8;}
-.tile.giallo .te{background:var(--gbg);} .tile.giallo .tl{background:var(--gc);}
-.tile.arancio .te{background:var(--abg);} .tile.arancio .tl{background:var(--ac);}
-.tile.verde .te{background:var(--vebg);} .tile.verde .tl{background:var(--vec);}
-.tile.blu .te{background:var(--bbg);} .tile.blu .tl{background:var(--bc);}
-.tile.viola .te{background:var(--vibg);} .tile.viola .tl{background:var(--vic);}
-.tile.rosa .te{background:var(--rbg);} .tile.rosa .tl{background:var(--rc);}
-.tile.grigio .te{background:var(--grbg);} .tile.grigio .tl{background:var(--grc);}
-.add-n-btn{width:100%;background:#fff;border:2px dashed #c8cdd5;color:#9aa0ac;border-radius:14px;padding:12px;font-size:13px;font-weight:800;letter-spacing:.5px;margin-bottom:80px;transition:all .15s;}
-.add-n-btn:hover{border-color:#1a73e8;color:#1a73e8;}
-.ibtn{background:#f3f4f6;color:#555;border:none;border-radius:7px;padding:6px 10px;font-size:13px;transition:background .15s;}
-.ibtn:hover{background:#e8eaed;}
-.ibtn:disabled{opacity:.4;cursor:not-allowed;}
-.ibtn.d{background:#fff0f0;color:#c62828;}
-.ibtn.d:hover{background:#ffcdd2;}
-.epanel{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -6px 32px rgba(0,0,0,.13);padding:16px;z-index:300;max-height:82vh;overflow-y:auto;transition:transform .28s cubic-bezier(.34,1.56,.64,1);}
-.epanel.hide{transform:translateY(110%);}
-.epanel.show{transform:translateY(0);}
-.ep-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.ep-hdr strong{font-size:13px;letter-spacing:.3px;}
-.ep-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
-.ep-prev{width:74px;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.12);flex-shrink:0;}
-.ep-prev .te{min-height:52px;font-size:28px;}
-.ep-prev .tl{font-size:8px;min-height:24px;}
-.ep-prev.giallo .te{background:var(--gbg);} .ep-prev.giallo .tl{background:var(--gc);}
-.ep-prev.arancio .te{background:var(--abg);} .ep-prev.arancio .tl{background:var(--ac);}
-.ep-prev.verde .te{background:var(--vebg);} .ep-prev.verde .tl{background:var(--vec);}
-.ep-prev.blu .te{background:var(--bbg);} .ep-prev.blu .tl{background:var(--bc);}
-.ep-prev.viola .te{background:var(--vibg);} .ep-prev.viola .tl{background:var(--vic);}
-.ep-prev.rosa .te{background:var(--rbg);} .ep-prev.rosa .tl{background:var(--rc);}
-.ep-prev.grigio .te{background:var(--grbg);} .ep-prev.grigio .tl{background:var(--grc);}
-.fgrp{flex:1;display:flex;flex-direction:column;gap:8px;}
-.flbl{font-size:9.5px;font-weight:800;color:#888;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;}
-.finp{width:100%;border:1.5px solid #e0e3e8;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;outline:none;transition:border-color .15s;background:#fff;}
-.finp:focus{border-color:#1a73e8;}
-.erow{display:flex;gap:6px;align-items:center;}
-.emoji-inp{width:58px;text-align:center;font-size:22px;}
-.epk-btn{flex:1;background:#EEF0F5;color:#555;border:none;border-radius:8px;padding:8px;font-size:11px;font-weight:800;transition:all .18s;white-space:nowrap;}
-.epk-btn.open{background:#1a73e8;color:#fff;}
-.picker{background:#f8f9fc;border-radius:12px;border:1px solid #e8eaed;overflow:hidden;margin-top:10px;}
-.pk-search{padding:8px 10px 6px;border-bottom:1px solid #e8eaed;background:#fff;}
-.pk-si{display:flex;align-items:center;gap:6px;background:#f0f2f5;border-radius:8px;padding:5px 10px;}
-.pk-si input{flex:1;border:none;background:transparent;font-size:12px;outline:none;color:#333;}
-.pk-tabs{display:flex;overflow-x:auto;padding:5px 7px 0;gap:3px;background:#fff;border-bottom:1px solid #e8eaed;scrollbar-width:none;}
-.pk-tabs::-webkit-scrollbar{display:none;}
-.pk-tab{background:transparent;border:none;border-radius:8px 8px 0 0;padding:5px 8px;font-size:18px;flex-shrink:0;cursor:pointer;transition:background .15s;}
-.pk-tab.on{background:#1a73e8;}
-.pk-grid{padding:8px 10px 6px;max-height:145px;overflow-y:auto;}
-.pk-inner{display:flex;flex-wrap:wrap;gap:4px;}
-.pk-e{width:40px;height:40px;font-size:22px;background:#fff;border:1px solid #e8eaed;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;flex-shrink:0;padding:0;}
-.pk-e:hover{transform:scale(1.2);border-color:#1a73e8;}
-.pk-e.cur{border-color:#1a73e8;background:#e8f0fe;}
-.pk-hint{text-align:center;font-size:9px;color:#bbb;padding:2px 8px 8px;letter-spacing:.3px;}
-.pk-empty{text-align:center;color:#aaa;font-size:12px;padding:16px 0;}
-.csel{margin-top:12px;}
-.cchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
-.cchip{border-radius:8px;padding:5px 10px;font-size:10px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
-.spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.sptxt{color:#fff;font-size:14px;font-weight:700;letter-spacing:.5px;}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:10000;pointer-events:none;animation:tin .3s ease;}
-@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
-.modal{background:#fff;border-radius:16px;padding:20px;max-width:440px;width:100%;max-height:80vh;overflow-y:auto;}
-.modal h3{font-size:15px;font-weight:800;margin-bottom:10px;}
-.modal p{font-size:12px;color:#666;margin-bottom:10px;line-height:1.5;}
-.modal textarea{width:100%;height:110px;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:11px;font-family:monospace;resize:vertical;}
-.modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end;}
-/* print zone */
-#pz{position:absolute;left:-9999px;top:0;width:760px;padding:30px 22px;background:#F2F2F0;font-family:Arial,sans-serif;}
-.pz-doc-ttl{text-align:center;font-size:13px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px;}
-.pz-leg{text-align:center;font-size:9.5px;color:#888;margin-bottom:30px;line-height:1.8;}
-.pz-n{margin-bottom:34px;}
-.pz-nt{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:11px;}
-.pz-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
-.pz-tile{width:108px;border-radius:12px;overflow:hidden;}
-.pz-te{background:#fff;padding:13px 7px 9px;text-align:center;font-size:34px;min-height:66px;display:flex;align-items:center;justify-content:center;}
-.pz-tl{padding:6px 4px;text-align:center;font-weight:800;font-size:9px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.3;min-height:30px;display:flex;align-items:center;justify-content:center;}
-.pz-tile.giallo .pz-te{background:#FFFDE7;} .pz-tile.giallo .pz-tl{background:#F9A825;}
-.pz-tile.arancio .pz-te{background:#FFF8E1;} .pz-tile.arancio .pz-tl{background:#EF6C00;}
-.pz-tile.verde .pz-te{background:#F1F8E9;} .pz-tile.verde .pz-tl{background:#388E3C;}
-.pz-tile.blu .pz-te{background:#E3F2FD;} .pz-tile.blu .pz-tl{background:#1565C0;}
-.pz-tile.viola .pz-te{background:#F3E5F5;} .pz-tile.viola .pz-tl{background:#7B1FA2;}
-.pz-tile.rosa .pz-te{background:#FCE4EC;} .pz-tile.rosa .pz-tl{background:#C2185B;}
-.pz-tile.grigio .pz-te{background:#F5F5F5;} .pz-tile.grigio .pz-tl{background:#9E9E9E;}
-@media(min-width:768px){.nlist{max-width:860px;margin:0 auto;} .doc-hdr{padding:24px 20px 8px;}}
-@media print{body{background:#fff;} #pz{position:static;width:100%;padding:20px;} .topbar,.nlist,.doc-hdr,.legenda,.epanel{display:none!important;}}
+  /* ════════════════════════════════════════════════
+     PALETTE POETRIFY
+     ════════════════════════════════════════════════ */
+  :root {
+    --p-ivory:        #FAF7F2;  /* sfondo principale, avorio caldo */
+    --p-paper:        #FFFFFF;  /* carte, pannelli */
+    --p-cream:        #F5EFE3;  /* sfondi secondari, hover */
+    --p-line:         #E8E2D5;  /* bordi sottili */
+    --p-line-strong:  #C9BFA8;  /* bordi marcati */
+    --p-ink:          #2C3E50;  /* testo principale, blu Poetrify */
+    --p-ink-light:    #5A6B7A;  /* testo secondario */
+    --p-muted:        #8E867A;  /* didascalie, meta */
+    --p-sepia:        #8B5E3C;  /* accenti, citazioni */
+    --p-sepia-light:  #C8A887;  /* accenti chiari */
+    --p-warm-bg:      #FFFAF0;  /* highlight delicato */
+    --p-success:      #4A6741;  /* verde-oliva */
+    --p-warning:      #B8860B;  /* ocra */
+    --p-danger:       #7A2828;  /* bordeaux */
+
+    --serif: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+    --sans:  'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: var(--sans);
+    background: var(--p-ivory);
+    color: var(--p-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ════════════════════════════════════════════════
+     INTESTAZIONE
+     ════════════════════════════════════════════════ */
+  .app-header {
+    background: var(--p-paper);
+    border-bottom: 1px solid var(--p-line);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--p-ink);
+    color: var(--p-ivory);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--p-ink);
+    line-height: 1.05;
+    letter-spacing: 0.2px;
+  }
+  .brand-subtitle {
+    font-size: 10px;
+    color: var(--p-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.8px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ════════════════════════════════════════════════
+     BOTTONI
+     ════════════════════════════════════════════════ */
+  .btn {
+    border: none;
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--sans);
+    white-space: nowrap;
+    user-select: none;
+    min-height: 38px;
+    letter-spacing: 0.2px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:focus-visible { outline: 2px solid var(--p-sepia); outline-offset: 2px; }
+  .btn-primary {
+    background: var(--p-ink);
+    color: var(--p-ivory);
+  }
+  .btn-primary:hover { background: #1a2733; }
+  .btn-secondary {
+    background: var(--p-cream);
+    color: var(--p-ink);
+    border: 1px solid var(--p-line);
+  }
+  .btn-secondary:hover { background: var(--p-line); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--p-ink);
+    border: 1px solid var(--p-line);
+  }
+  .btn-ghost:hover { background: var(--p-cream); }
+  .btn-danger {
+    background: transparent;
+    color: var(--p-danger);
+    border: 1px solid var(--p-line);
+  }
+  .btn-danger:hover { background: #FCEBEB; border-color: var(--p-danger); }
+  .btn-success {
+    background: var(--p-success);
+    color: var(--p-ivory);
+  }
+  .btn-success:hover { background: #3d5536; }
+  .btn-icon {
+    width: 38px; height: 38px; min-height: 38px;
+    padding: 0;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  .btn-small {
+    padding: 7px 12px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .btn-large {
+    padding: 14px 22px;
+    font-size: 14px;
+    min-height: 48px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ════════════════════════════════════════════════
+     NAVIGAZIONE PRINCIPALE
+     ════════════════════════════════════════════════ */
+  .tab-nav {
+    display: flex;
+    background: var(--p-paper);
+    border-bottom: 1px solid var(--p-line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 14px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--p-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    font-family: var(--sans);
+    white-space: nowrap;
+    min-height: 48px;
+    letter-spacing: 0.3px;
+  }
+  .tab-btn.active { color: var(--p-ink); border-bottom-color: var(--p-ink); }
+  .tab-btn:hover:not(:disabled) { color: var(--p-ink); }
+  .tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tab-btn:focus-visible { outline: 2px solid var(--p-sepia); outline-offset: -2px; }
+
+  /* ════════════════════════════════════════════════
+     LAYOUT PRINCIPALE
+     ════════════════════════════════════════════════ */
+  .app-main {
+    flex: 1;
+    padding: 20px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ════════════════════════════════════════════════
+     PANNELLI
+     ════════════════════════════════════════════════ */
+  .panel {
+    background: var(--p-paper);
+    border: 1px solid var(--p-line);
+    border-radius: 8px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .panel-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--p-ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .panel-subtitle {
+    font-size: 12px;
+    color: var(--p-muted);
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+  .panel-divider {
+    height: 1px;
+    background: var(--p-line);
+    margin: 18px 0;
+    border: none;
+  }
+
+  /* ════════════════════════════════════════════════
+     PROGETTI
+     ════════════════════════════════════════════════ */
+  .project-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .project-card {
+    border: 1px solid var(--p-line);
+    border-radius: 6px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--p-paper);
+    position: relative;
+  }
+  .project-card:hover {
+    border-color: var(--p-line-strong);
+    box-shadow: 0 2px 12px rgba(44, 62, 80, 0.06);
+    transform: translateY(-1px);
+  }
+  .project-card.active {
+    border-color: var(--p-ink);
+    background: var(--p-warm-bg);
+    box-shadow: 0 0 0 1px var(--p-ink);
+  }
+  .project-card-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 6px;
+    color: var(--p-ink);
+    word-break: break-word;
+    line-height: 1.25;
+  }
+  .project-card-meta {
+    font-size: 11px;
+    color: var(--p-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .project-card-mode {
+    display: inline-block;
+    background: var(--p-cream);
+    color: var(--p-ink-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .project-card-mode.guided {
+    background: #EAE3D2;
+    color: var(--p-sepia);
+  }
+  .project-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    border-top: 1px solid var(--p-line);
+    padding-top: 12px;
+  }
+
+  /* ════════════════════════════════════════════════
+     INPUT
+     ════════════════════════════════════════════════ */
+  .title-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--p-line);
+    padding: 12px 4px;
+    font-size: 26px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--p-ink);
+    font-family: var(--serif);
+    outline: none;
+    margin-bottom: 18px;
+    transition: border-color 0.2s;
+  }
+  .title-input:focus { border-bottom-color: var(--p-ink); }
+
+  .text-input {
+    border: 1px solid var(--p-line);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: var(--sans);
+    background: var(--p-paper);
+    color: var(--p-ink);
+    outline: none;
+    flex: 1;
+    min-width: 100px;
+    min-height: 38px;
+    transition: border-color 0.15s;
+  }
+  .text-input:focus { border-color: var(--p-ink); }
+
+  .textarea {
+    border: 1px solid var(--p-line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: var(--serif);
+    background: var(--p-paper);
+    color: var(--p-ink);
+    outline: none;
+    width: 100%;
+    min-height: 100px;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color 0.15s;
+  }
+  .textarea:focus { border-color: var(--p-ink); }
+
+  /* ════════════════════════════════════════════════
+     NUCLEO (blocco di tessere)
+     ════════════════════════════════════════════════ */
+  .nucleus-block {
+    background: var(--p-warm-bg);
+    border: 1px solid var(--p-line);
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .nucleus-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .nucleus-title-input {
+    flex: 1;
+    min-width: 200px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--p-ink);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-family: var(--sans);
+    background: var(--p-paper);
+    outline: none;
+    min-height: 38px;
+  }
+  .nucleus-title-input:focus { border-color: var(--p-ink); }
+
+  /* ════════════════════════════════════════════════
+     TESSERE
+     ════════════════════════════════════════════════ */
+  .tiles-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 14px;
+  }
+  .tile-edit {
+    width: 110px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(44, 62, 80, 0.08);
+    background: var(--p-paper);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .tile-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.14);
+  }
+  .tile-edit.selected {
+    box-shadow: 0 0 0 2px var(--p-ink);
+  }
+  .tile-edit:focus-visible {
+    outline: 2px solid var(--p-sepia);
+    outline-offset: 2px;
+  }
+  .tile-edit.has-warning::before {
+    content: '⚠';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--p-warning);
+    color: white;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .tile-emoji-area {
+    padding: 14px 8px 10px;
+    text-align: center;
+    font-size: 42px;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--p-paper);
+    line-height: 1;
+  }
+  .tile-emoji-area.text-mode {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+    padding: 10px 6px;
+    font-family: var(--serif);
+  }
+  .tile-label {
+    padding: 8px 5px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 9.5px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.35;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
+    font-family: var(--sans);
+  }
+  .tile-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--p-danger);
+    color: white;
+    border: 2px solid var(--p-paper);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 5;
+  }
+  .tile-edit:hover .tile-delete-btn,
+  .tile-edit.selected .tile-delete-btn { display: flex; }
+
+  .add-tile-btn {
+    width: 110px;
+    height: 108px;
+    border: 1px dashed var(--p-line-strong);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 28px;
+    color: var(--p-muted);
+    transition: all 0.15s;
+    flex-shrink: 0;
+    font-family: var(--serif);
+    font-weight: 300;
+  }
+  .add-tile-btn:hover {
+    border-color: var(--p-ink);
+    color: var(--p-ink);
+    background: var(--p-cream);
+  }
+  .add-tile-btn:focus-visible { outline: 2px solid var(--p-sepia); outline-offset: 2px; }
+
+  /* ════════════════════════════════════════════════
+     COLORI FITZGERALD (uguali in editor + anteprima)
+     ════════════════════════════════════════════════ */
+  .fitz-grigio  { background: #F5F5F5; }
+  .fitz-grigio  .tile-emoji-area, .fitz-grigio  .preview-tile-emoji { background: #F5F5F5; }
+  .fitz-grigio  .tile-label, .fitz-grigio  .preview-tile-label { background: #9E9E9E; }
+  .fitz-giallo  { background: #FFFDE7; }
+  .fitz-giallo  .tile-emoji-area, .fitz-giallo  .preview-tile-emoji { background: #FFFDE7; }
+  .fitz-giallo  .tile-label, .fitz-giallo  .preview-tile-label { background: #F9A825; }
+  .fitz-arancio { background: #FFF8E1; }
+  .fitz-arancio .tile-emoji-area, .fitz-arancio .preview-tile-emoji { background: #FFF8E1; }
+  .fitz-arancio .tile-label, .fitz-arancio .preview-tile-label { background: #EF6C00; }
+  .fitz-verde   { background: #F1F8E9; }
+  .fitz-verde   .tile-emoji-area, .fitz-verde   .preview-tile-emoji { background: #F1F8E9; }
+  .fitz-verde   .tile-label, .fitz-verde   .preview-tile-label { background: #388E3C; }
+  .fitz-blu     { background: #E3F2FD; }
+  .fitz-blu     .tile-emoji-area, .fitz-blu     .preview-tile-emoji { background: #E3F2FD; }
+  .fitz-blu     .tile-label, .fitz-blu     .preview-tile-label { background: #1565C0; }
+  .fitz-viola   { background: #F3E5F5; }
+  .fitz-viola   .tile-emoji-area, .fitz-viola   .preview-tile-emoji { background: #F3E5F5; }
+  .fitz-viola   .tile-label, .fitz-viola   .preview-tile-label { background: #7B1FA2; }
+  .fitz-rosa    { background: #FCE4EC; }
+  .fitz-rosa    .tile-emoji-area, .fitz-rosa    .preview-tile-emoji { background: #FCE4EC; }
+  .fitz-rosa    .tile-label, .fitz-rosa    .preview-tile-label { background: #C2185B; }
+
+  .fitz-grigio.text-mode .tile-emoji-area, .fitz-grigio.text-mode .preview-tile-emoji   { color: #555; }
+  .fitz-giallo.text-mode .tile-emoji-area, .fitz-giallo.text-mode .preview-tile-emoji   { color: #F9A825; }
+  .fitz-arancio.text-mode .tile-emoji-area, .fitz-arancio.text-mode .preview-tile-emoji { color: #EF6C00; font-style: italic; }
+  .fitz-verde.text-mode .tile-emoji-area, .fitz-verde.text-mode .preview-tile-emoji     { color: #388E3C; }
+  .fitz-blu.text-mode .tile-emoji-area, .fitz-blu.text-mode .preview-tile-emoji         { color: #1565C0; }
+  .fitz-viola.text-mode .tile-emoji-area, .fitz-viola.text-mode .preview-tile-emoji     { color: #7B1FA2; }
+  .fitz-rosa.text-mode .tile-emoji-area, .fitz-rosa.text-mode .preview-tile-emoji       { color: #C2185B; }
+
+  /* ════════════════════════════════════════════════
+     EDITOR TESSERA SELEZIONATA
+     ════════════════════════════════════════════════ */
+  .tile-editor-panel {
+    background: var(--p-paper);
+    border: 1px solid var(--p-line-strong);
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .tile-editor-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .tile-editor-row:last-child { margin-bottom: 0; }
+  .tile-editor-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-ink-light);
+    min-width: 90px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ════════════════════════════════════════════════
+     SELETTORE COLORE FITZGERALD CON GLOSSE
+     ════════════════════════════════════════════════ */
+  .color-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .color-chip-wrapper {
+    position: relative;
+  }
+  .color-chip {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--p-paper);
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 0 0 1px var(--p-line);
+  }
+  .color-chip:hover { transform: scale(1.1); box-shadow: 0 0 0 1px var(--p-line-strong); }
+  .color-chip.selected {
+    box-shadow: 0 0 0 2px var(--p-ink);
+    transform: scale(1.05);
+  }
+  .color-chip:focus-visible { outline: 2px solid var(--p-sepia); outline-offset: 3px; }
+
+  /* Glossa Fitzgerald (tooltip) */
+  .gloss-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--p-ink);
+    color: var(--p-ivory);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    font-weight: 400;
+    white-space: normal;
+    width: 240px;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translateX(-50%) translateY(4px);
+    box-shadow: 0 4px 16px rgba(44, 62, 80, 0.25);
+    line-height: 1.4;
+  }
+  .gloss-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--p-ink);
+  }
+  .gloss-tooltip strong {
+    display: block;
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-style: italic;
+  }
+  .gloss-tooltip em {
+    color: var(--p-sepia-light);
+    font-style: italic;
+    font-size: 11px;
+    display: block;
+    margin-top: 4px;
+  }
+  .color-chip-wrapper:hover .gloss-tooltip,
+  .color-chip-wrapper:focus-within .gloss-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ════════════════════════════════════════════════
+     TOGGLE
+     ════════════════════════════════════════════════ */
+  .toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--p-ink-light);
+    user-select: none;
+    font-weight: 500;
+  }
+  .toggle-switch input { display: none; }
+  .toggle-track {
+    width: 40px;
+    height: 22px;
+    background: var(--p-line-strong);
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: var(--p-paper);
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-track { background: var(--p-ink); }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+
+  /* ════════════════════════════════════════════════
+     EMOJI PICKER MODAL
+     ════════════════════════════════════════════════ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(44, 62, 80, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+    backdrop-filter: blur(2px);
+  }
+  .modal-content {
+    background: var(--p-paper);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--p-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--p-ink);
+  }
+  .modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+
+  .emoji-search {
+    width: 100%;
+    border: 1px solid var(--p-line);
+    border-radius: 4px;
+    padding: 11px 14px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    font-family: var(--sans);
+    outline: none;
+    background: var(--p-warm-bg);
+  }
+  .emoji-search:focus { border-color: var(--p-ink); background: var(--p-paper); }
+
+  .emoji-category {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--p-sepia);
+    margin: 16px 0 8px;
+    border-bottom: 1px solid var(--p-line);
+    padding-bottom: 4px;
+  }
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 4px;
+  }
+  .emoji-btn {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--p-cream);
+    cursor: pointer;
+    font-size: 26px;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .emoji-btn:hover { background: var(--p-warm-bg); border-color: var(--p-ink); transform: scale(1.05); }
+  .emoji-btn:focus-visible { outline: 2px solid var(--p-sepia); outline-offset: 1px; }
+
+  /* ════════════════════════════════════════════════
+     ANTEPRIMA / STAMPA
+     ════════════════════════════════════════════════ */
+  .preview-container {
+    background: var(--p-paper);
+    border: 1px solid var(--p-line);
+    border-radius: 8px;
+    padding: 40px 32px;
+  }
+  .preview-doc-title {
+    text-align: center;
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--p-ink);
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+  .preview-doc-subtitle {
+    text-align: center;
+    font-size: 11px;
+    color: var(--p-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 28px;
+    font-weight: 500;
+  }
+  .preview-legenda {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 36px;
+    padding: 12px 16px;
+    background: var(--p-warm-bg);
+    border-radius: 6px;
+    border: 1px solid var(--p-line);
+  }
+  .preview-legenda-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--p-ink-light);
+    font-weight: 500;
+  }
+  .preview-legenda-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .preview-nucleus { margin-bottom: 36px; }
+  .preview-nucleus-title {
+    text-align: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--p-sepia);
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+  .preview-tiles-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .preview-tile {
+    width: 110px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10);
+    flex-shrink: 0;
+  }
+  .preview-tile-emoji {
+    padding: 14px 8px 10px;
+    text-align: center;
+    font-size: 42px;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .preview-tile.text-mode .preview-tile-emoji {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+    padding: 10px 6px;
+    font-family: var(--serif);
+  }
+  .preview-tile-label {
+    padding: 8px 5px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 9.5px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.35;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
+    font-family: var(--sans);
+  }
+  .preview-footer {
+    text-align: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--p-muted);
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--p-line);
+  }
+
+  /* ════════════════════════════════════════════════
+     STATO VUOTO
+     ════════════════════════════════════════════════ */
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px;
+  }
+  .empty-state-icon {
+    font-family: var(--serif);
+    font-size: 56px;
+    color: var(--p-line-strong);
+    margin-bottom: 14px;
+    line-height: 1;
+  }
+  .empty-state-text {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-style: italic;
+    color: var(--p-muted);
+    margin-bottom: 4px;
+  }
+  .empty-state-hint {
+    font-size: 12px;
+    color: var(--p-muted);
+    margin-bottom: 18px;
+  }
+
+  /* ════════════════════════════════════════════════
+     TOAST
+     ════════════════════════════════════════════════ */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--p-ink);
+    color: var(--p-ivory);
+    padding: 14px 22px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--sans);
+    box-shadow: 0 6px 20px rgba(44, 62, 80, 0.30);
+    z-index: 200;
+    animation: toastIn 0.2s ease-out;
+    max-width: 90vw;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  /* ════════════════════════════════════════════════
+     HELP TIP / GLOSSA INFO
+     ════════════════════════════════════════════════ */
+  .help-tip {
+    background: var(--p-warm-bg);
+    border-left: 3px solid var(--p-sepia);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    font-family: var(--serif);
+    color: var(--p-ink-light);
+    margin-bottom: 16px;
+    line-height: 1.55;
+    font-style: italic;
+  }
+  .help-tip strong { font-weight: 600; color: var(--p-ink); font-style: normal; }
+
+  /* ════════════════════════════════════════════════
+     MODALITÀ SELECTOR (modale di scelta libera/guidata)
+     ════════════════════════════════════════════════ */
+  .mode-choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .mode-card {
+    border: 1px solid var(--p-line);
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--p-paper);
+    text-align: left;
+  }
+  .mode-card:hover {
+    border-color: var(--p-ink);
+    background: var(--p-warm-bg);
+    transform: translateY(-2px);
+  }
+  .mode-card-icon {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--p-sepia);
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  .mode-card-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--p-ink);
+    margin-bottom: 6px;
+  }
+  .mode-card-desc {
+    font-size: 12px;
+    color: var(--p-ink-light);
+    line-height: 1.5;
+  }
+
+  /* ════════════════════════════════════════════════
+     STEPPER (Modalità Guidata)
+     ════════════════════════════════════════════════ */
+  .stepper {
+    display: flex;
+    background: var(--p-paper);
+    border: 1px solid var(--p-line);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    gap: 4px;
+    scrollbar-width: thin;
+  }
+  .step-pill {
+    flex: 1;
+    min-width: 90px;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    line-height: 1.3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .step-pill .step-num {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 600;
+    font-style: italic;
+  }
+  .step-pill:hover { background: var(--p-cream); color: var(--p-ink); }
+  .step-pill.active {
+    background: var(--p-ink);
+    color: var(--p-ivory);
+  }
+  .step-pill.active .step-num { color: var(--p-sepia-light); }
+  .step-pill.completed { color: var(--p-success); }
+  .step-pill.completed::after { content: ' ✓'; }
+
+  .step-content {
+    background: var(--p-paper);
+    border: 1px solid var(--p-line);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .step-title {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--p-ink);
+    margin-bottom: 4px;
+  }
+  .step-subtitle {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--p-sepia);
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--p-line);
+    padding-bottom: 12px;
+  }
+  .step-instruction {
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--p-ink-light);
+    margin-bottom: 18px;
+  }
+  .step-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--p-line);
+    gap: 8px;
+  }
+
+  /* ════════════════════════════════════════════════
+     STEP 1 — TESTO ORIGINALE EVIDENZIABILE
+     ════════════════════════════════════════════════ */
+  .original-text-box {
+    background: var(--p-warm-bg);
+    border: 1px solid var(--p-line);
+    border-left: 4px solid var(--p-sepia);
+    border-radius: 4px;
+    padding: 18px 22px;
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--p-ink);
+    margin-bottom: 18px;
+  }
+  .original-text-box[contenteditable="true"] { outline: none; cursor: text; }
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--p-line);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--p-paper);
+  }
+  .check-item:hover { background: var(--p-cream); border-color: var(--p-line-strong); }
+  .check-item input[type="checkbox"] {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--p-ink);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .check-item-text {
+    font-size: 13px;
+    color: var(--p-ink);
+    line-height: 1.4;
+  }
+  .check-item.checked { background: var(--p-warm-bg); border-color: var(--p-sepia); }
+
+  /* ════════════════════════════════════════════════
+     STEP 2/3 — NUCLEO EDITOR
+     ════════════════════════════════════════════════ */
+  .nucleus-edit-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--p-warm-bg);
+    border: 1px solid var(--p-line);
+    border-radius: 4px;
+  }
+  .nucleus-num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--p-sepia);
+    min-width: 32px;
+    text-align: center;
+  }
+
+  /* ════════════════════════════════════════════════
+     STEP 4 — TABELLA LESSICO
+     ════════════════════════════════════════════════ */
+  .lex-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+  .lex-table th, .lex-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--p-line);
+    font-size: 13px;
+  }
+  .lex-table th {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+    color: var(--p-sepia);
+    font-size: 12px;
+    background: var(--p-warm-bg);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lex-table input {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: var(--sans);
+    border-radius: 3px;
+    outline: none;
+  }
+  .lex-table input:focus { background: var(--p-paper); border-color: var(--p-line); }
+
+  /* ════════════════════════════════════════════════
+     PANNELLO VALIDATORE (warning didattici)
+     ════════════════════════════════════════════════ */
+  .validator-panel {
+    background: var(--p-paper);
+    border: 1px solid var(--p-line);
+    border-left: 3px solid var(--p-warning);
+    border-radius: 0 6px 6px 0;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .validator-title {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--p-ink);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .validator-empty {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--p-success);
+    font-size: 13px;
+    border-left-color: var(--p-success);
+  }
+  .warning-list {
+    list-style: none;
+    margin: 0;
+  }
+  .warning-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--p-line);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .warning-item:last-child { border-bottom: none; }
+  .warning-icon {
+    flex-shrink: 0;
+    color: var(--p-warning);
+    font-weight: 700;
+  }
+  .warning-icon.error { color: var(--p-danger); }
+  .warning-icon.success { color: var(--p-success); }
+  .warning-text { color: var(--p-ink-light); }
+  .warning-text strong { color: var(--p-ink); font-weight: 600; }
+  .warning-text em { color: var(--p-sepia); font-style: italic; }
+
+  /* ════════════════════════════════════════════════
+     CHECKLIST PRE-CONSEGNA
+     ════════════════════════════════════════════════ */
+  .checklist-section {
+    margin-bottom: 14px;
+  }
+  .checklist-section-title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--p-sepia);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 4px;
+    font-size: 13px;
+    color: var(--p-ink-light);
+    line-height: 1.4;
+  }
+  .checklist-item input { margin-top: 2px; flex-shrink: 0; accent-color: var(--p-ink); width: 15px; height: 15px; }
+  .checklist-item.checked .checklist-item-label {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  /* ════════════════════════════════════════════════
+     LETTORE VOCALE
+     ════════════════════════════════════════════════ */
+  .speech-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--p-warm-bg);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border: 1px solid var(--p-line);
+  }
+  .speech-label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--p-sepia);
+    flex: 1;
+    min-width: 200px;
+  }
+
+  /* ════════════════════════════════════════════════
+     SIDEBAR LAYOUT (anteprima fianco a fianco)
+     ════════════════════════════════════════════════ */
+  .split-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 1100px) {
+    .split-layout.with-sidebar {
+      grid-template-columns: 1fr 320px;
+    }
+  }
+  .original-sidebar {
+    position: sticky;
+    top: 80px;
+    align-self: start;
+  }
+  .sidebar-title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--p-sepia);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .sidebar-text {
+    font-family: var(--serif);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--p-ink);
+    background: var(--p-warm-bg);
+    padding: 14px 16px;
+    border-radius: 4px;
+    border-left: 3px solid var(--p-sepia);
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .sidebar-text mark {
+    background: rgba(255, 235, 130, 0.6);
+    padding: 1px 2px;
+    border-radius: 2px;
+  }
+  .sidebar-text mark.covered {
+    background: rgba(56, 142, 60, 0.18);
+    color: var(--p-success);
+  }
+  .sidebar-stats {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--p-muted);
+    font-style: italic;
+    text-align: center;
+    font-family: var(--serif);
+  }
+
+  /* ════════════════════════════════════════════════
+     MOBILE
+     ════════════════════════════════════════════════ */
+  @media (max-width: 700px) {
+    .app-main { padding: 12px; }
+    .panel { padding: 16px; }
+    .step-content { padding: 18px 14px; }
+    .brand-title { font-size: 18px; }
+    .brand-subtitle { font-size: 9px; }
+    .brand-mark { width: 32px; height: 32px; font-size: 18px; }
+    .panel-title { font-size: 18px; }
+    .step-title { font-size: 22px; }
+    .preview-doc-title { font-size: 22px; }
+    .tile-edit, .preview-tile, .add-tile-btn { width: 96px; }
+    .add-tile-btn { height: 100px; }
+    .tile-emoji-area, .preview-tile-emoji { font-size: 36px; min-height: 66px; padding: 12px 6px 8px; }
+    .tile-label, .preview-tile-label { font-size: 8.5px; padding: 7px 4px; min-height: 30px; }
+    .tile-emoji-area.text-mode, .preview-tile.text-mode .preview-tile-emoji { font-size: 14px; }
+    .preview-container { padding: 22px 12px; }
+    .nucleus-block { padding: 14px 12px; }
+    .header-actions { width: 100%; justify-content: flex-start; }
+    .mode-choice { grid-template-columns: 1fr; }
+    .gloss-tooltip { width: 200px; font-size: 11px; }
+    .step-pill { min-width: 70px; padding: 8px 4px; }
+    .step-pill .step-num { font-size: 14px; }
+  }
+
+  /* ════════════════════════════════════════════════
+     STAMPA / PDF
+     ════════════════════════════════════════════════ */
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: white; }
+    .app-header, .tab-nav, .editor-only, .help-tip, .stepper { display: none !important; }
+    .app-main { padding: 0; max-width: none; }
+    .preview-container { box-shadow: none; padding: 0; border: none; border-radius: 0; }
+    .preview-tile { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+    .preview-nucleus { page-break-inside: avoid; }
+    .panel { border: none; box-shadow: none; padding: 0; }
+  }
+
+  /* Accessibilità: visible focus per testi e bottoni custom */
+  *:focus-visible {
+    outline: 2px solid var(--p-sepia);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  /* Skip link per screen reader */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--p-ink);
+    color: var(--p-ivory);
+    padding: 8px 16px;
+    text-decoration: none;
+    z-index: 999;
+  }
+  .skip-link:focus { top: 0; }
 </style>
 </head>
 <body>
-<div id="app">
+<a href="#main-content" class="skip-link">Vai al contenuto principale</a>
+<div id="app"></div>
 
-  <!-- Loading -->
-  <div v-if="loading" class="overlay">
-    <div class="spinner"></div>
-    <div class="sptxt">{{ loadMsg }}</div>
-  </div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-  <!-- Toast -->
-  <div v-if="toast" class="toast">{{ toast }}</div>
+// ════════════════════════════════════════════════════════════════════════════
+// DATI: COLORI FITZGERALD CON GLOSSE DIDATTICHE
+// ════════════════════════════════════════════════════════════════════════════
+const FITZGERALD = [
+  {
+    key: 'grigio',
+    name: 'Articolo / Pronome / Preposizione',
+    short: 'Articoli',
+    label: '#9E9E9E',
+    glossTitle: 'Articoli, pronomi, preposizioni',
+    glossDesc: 'Parole funzionali che legano la frase: articoli (il, la), pronomi (questo, lui), preposizioni (di, a, con).',
+    examples: 'il, questo, di, a, con'
+  },
+  {
+    key: 'giallo',
+    name: 'Sostantivo',
+    short: 'Sostantivo',
+    label: '#F9A825',
+    glossTitle: 'Sostantivi',
+    glossDesc: 'Persone, cose, luoghi e concetti comuni: tutto ciò che si può nominare.',
+    examples: 'libro, scuola, mamma'
+  },
+  {
+    key: 'arancio',
+    name: 'Nome proprio',
+    short: 'Nome proprio',
+    label: '#EF6C00',
+    glossTitle: 'Nomi propri',
+    glossDesc: 'Persone, città, paesi, opere identificate per nome — sempre con la maiuscola.',
+    examples: 'Dante, Roma, Italia'
+  },
+  {
+    key: 'verde',
+    name: 'Verbo (azione)',
+    short: 'Verbo',
+    label: '#388E3C',
+    glossTitle: 'Verbi (azioni)',
+    glossDesc: 'Azioni, stati, accadimenti. In CAA si usano solo presente o passato prossimo.',
+    examples: 'mangiare, scrivere, andare'
+  },
+  {
+    key: 'blu',
+    name: 'Aggettivo / Avverbio',
+    short: 'Aggettivo',
+    label: '#1565C0',
+    glossTitle: 'Aggettivi e avverbi',
+    glossDesc: 'Qualità di sostantivi (aggettivi) o di verbi (avverbi): come è una cosa, come si svolge un\'azione.',
+    examples: 'bello, grande, velocemente'
+  },
+  {
+    key: 'viola',
+    name: 'Tempo',
+    short: 'Tempo',
+    label: '#7B1FA2',
+    glossTitle: 'Tempo e relazioni temporali',
+    glossDesc: 'Indicazioni cronologiche: ere, secoli, date, momenti del giorno, riferimenti temporali.',
+    examples: 'ieri, domani, XIII secolo'
+  },
+  {
+    key: 'rosa',
+    name: 'Congiunzione / Connettivo',
+    short: 'Connettivo',
+    label: '#C2185B',
+    glossTitle: 'Congiunzioni e connettivi',
+    glossDesc: 'Parole che collegano frasi e idee: congiunzioni, avverbi connettivi, marche logiche.',
+    examples: 'e, ma, perché, quindi'
+  },
+];
 
-  <!-- Import modal -->
-  <div v-if="showImp" class="modal-bg" @click.self="showImp=false">
-    <div class="modal">
-      <h3>📥 Importa dati JSON</h3>
-      <p>Incolla qui i dati esportati con il pulsante 📤, poi premi Importa.</p>
-      <textarea v-model="impTxt" placeholder='{"title":"...","nuclei":[...]}'></textarea>
-      <div class="modal-btns">
-        <button class="btn btn-out" style="font-size:11px;padding:7px 12px;" @click="showImp=false">Annulla</button>
-        <button class="btn btn-blue" style="font-size:11px;padding:7px 12px;" @click="doImport">Importa</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Topbar -->
-  <header class="topbar">
-    <div class="tb-left">
-      <span class="tb-logo">🗂️</span>
-      <span class="tb-title">Editor Tavola CAA</span>
-    </div>
-    <div class="tb-right">
-      <button class="btn btn-out" @click="showImp=true" title="Importa dati">📥</button>
-      <button class="btn btn-out" @click="doExpJSON" title="Esporta dati">📤</button>
-      <button class="btn btn-gr"  @click="doSaveHTML">💾 Condividi</button>
-      <button :class="['btn','btn-vi',pdfFlash?'btn-ok':'']" @click="doExpPDF">
-        {{ pdfFlash?'✅ PDF!':'📄 PDF' }}
-      </button>
-    </div>
-  </header>
-
-  <!-- Titolo documento -->
-  <div class="doc-hdr">
-    <div v-if="!editTtl" class="doc-ttl-wrap" @click="editTtl=true" title="Clicca per modificare">
-      <span>{{ data.title }}</span><span style="font-size:12px;color:#bbb;">✏️</span>
-    </div>
-    <input v-else class="doc-ttl-inp" v-model="data.title" @blur="editTtl=false" @keydown.enter="editTtl=false" autofocus>
-    <div class="legenda">
-      <span v-for="(c,k) in FIT" :key="k" class="lchip"
-        :style="{background:c.bg,color:c.lbl,borderColor:c.lbl+'44',border:'1px solid'}">
-        {{ c.dot }} {{ c.name }}
-      </span>
-    </div>
-  </div>
-
-  <!-- Nuclei -->
-  <div class="nlist">
-    <div v-for="(n,ni) in data.nuclei" :key="n.id" class="ncard">
-      <div class="nhdr">
-        <div class="nhdr-l">
-          <span class="nidx">F{{ ni+1 }}</span>
-          <input v-if="editN===n.id" class="nttl-i" v-model="n.title"
-            @blur="editN=null" @keydown.enter="editN=null" autofocus>
-          <span v-else class="nttl-s" @click="editN=n.id" title="Rinomina frase">
-            {{ n.title }} <span style="color:#ccc;font-weight:400;">✏️</span>
-          </span>
-        </div>
-        <div class="nactn">
-          <button class="ibtn" @click="moveN(n.id,-1)" :disabled="ni===0">↑</button>
-          <button class="ibtn" @click="moveN(n.id,1)" :disabled="ni===data.nuclei.length-1">↓</button>
-          <button class="ibtn d" @click="delN(n.id)" :disabled="data.nuclei.length===1">🗑</button>
-        </div>
-      </div>
-      <div class="trow">
-        <div v-for="t in n.tiles" :key="t.id" data-tile
-          :class="['tile',t.c,{sel:sel&&sel.nid===n.id&&sel.tid===t.id}]"
-          @click="selTile(n.id,t.id)">
-          <div class="te">{{ t.e }}</div>
-          <div class="tl">{{ t.w }}</div>
-        </div>
-        <div class="tile-add" @click="addTile(n.id)" title="Aggiungi tessera">
-          <span style="line-height:1">＋</span>
-          <span style="font-size:8px;font-weight:800;letter-spacing:.6px">TESSERA</span>
-        </div>
-      </div>
-    </div>
-    <button class="add-n-btn" @click="addN">＋ Aggiungi frase</button>
-  </div>
-
-  <!-- Pannello modifica -->
-  <div :class="['epanel', sel?'show':'hide']" ref="panelRef">
-    <template v-if="selT">
-      <div class="ep-hdr">
-        <strong>✏️ Modifica tessera</strong>
-        <div style="display:flex;gap:6px;">
-          <button class="ibtn" @click="movT(-1)">◀</button>
-          <button class="ibtn" @click="movT(1)">▶</button>
-          <button class="ibtn d" @click="delT">🗑</button>
-          <button class="ibtn" @click="closePan">✕</button>
-        </div>
-      </div>
-      <div class="ep-row">
-        <div :class="['ep-prev',selT.c]">
-          <div class="te" style="min-height:52px;font-size:28px;">{{ selT.e }}</div>
-          <div class="tl" style="font-size:8px;min-height:24px;">{{ selT.w }}</div>
-        </div>
-        <div class="fgrp">
-          <div>
-            <div class="flbl">Parola</div>
-            <input class="finp" :value="selT.w" @input="upd('w',$event.target.value)" placeholder="Es: ama">
-          </div>
-          <div>
-            <div class="flbl">Emoji pittogramma</div>
-            <div class="erow">
-              <input class="finp emoji-inp" :value="selT.e" @input="upd('e',$event.target.value)">
-              <button :class="['epk-btn',showPk?'open':'']" @click="showPk=!showPk">
-                {{ showPk?'▲ Chiudi':'🔍 Scegli emoji' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Selettore emoji -->
-      <div v-if="showPk" class="picker">
-        <div class="pk-search">
-          <div class="pk-si">
-            <span style="font-size:14px">🔍</span>
-            <input v-model="pkQ" placeholder="Cerca… es: sole, cuore, casa">
-            <span v-if="pkQ" @click="pkQ=''" style="cursor:pointer;color:#aaa;font-size:14px;">✕</span>
-          </div>
-        </div>
-        <div v-if="!pkQ" class="pk-tabs">
-          <button v-for="cat in eCats" :key="cat" :class="['pk-tab',pkCat===cat?'on':'']"
-            @click="pkCat=cat" :title="cat.slice(cat.indexOf(' ')+1)">
-            {{ cat.split(' ')[0] }}
-          </button>
-        </div>
-        <div class="pk-grid">
-          <div v-if="pkList.length===0" class="pk-empty">Nessun risultato per "{{ pkQ }}"</div>
-          <div v-else class="pk-inner">
-            <button v-for="(em,i) in pkList" :key="i" :class="['pk-e',em===selT.e?'cur':'']"
-              @click="pickE(em)" :title="em">{{ em }}</button>
-          </div>
-        </div>
-        <div class="pk-hint">Tocca un'emoji per inserirla &nbsp;·&nbsp; Puoi anche incollarla nel campo sopra</div>
-      </div>
-
-      <!-- Colori Fitzgerald -->
-      <div class="csel">
-        <div class="flbl">Categoria Fitzgerald</div>
-        <div class="cchips">
-          <button v-for="(c,k) in FIT" :key="k" class="cchip"
-            :style="{background:selT.c===k?c.lbl:c.bg,color:selT.c===k?'#fff':c.lbl,
-              borderColor:c.lbl,boxShadow:selT.c===k?'0 2px 8px '+c.lbl+'55':'none'}"
-            @click="upd('c',k)">
-            {{ c.dot }} {{ c.name }}
-          </button>
-        </div>
-      </div>
-    </template>
-  </div>
-
-</div><!-- #app -->
-
-<!-- Zona di stampa (nascosta) -->
-<div id="pz">
-  <div id="pz-ttl" class="pz-doc-ttl"></div>
-  <div class="pz-leg">🟡 sostantivo &nbsp;·&nbsp; 🟠 nome proprio &nbsp;·&nbsp; 🟢 verbo &nbsp;·&nbsp; 🔵 agg/avv &nbsp;·&nbsp; 🟣 tempo &nbsp;·&nbsp; 🩷 cong. &nbsp;·&nbsp; ⬜ funzionale</div>
-  <div id="pz-body"></div>
-</div>
-
-<!-- Dati correnti (sostituiti al salvataggio) -->
-<script id="caa-data" type="application/json">
-{"title":"San Francesco d\u2019Assisi","nuclei":[{"id":1,"title":"Identit\u00e0","tiles":[{"id":1,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":2,"e":"\ud83d\udff0","w":"\u00e8","c":"verde"},{"id":3,"e":"\u271d\ufe0f","w":"santo","c":"giallo"},{"id":4,"e":"\u2b50","w":"importante","c":"blu"}]},{"id":2,"title":"Come viene chiamato","tiles":[{"id":5,"e":"\ud83d\udc65","w":"alcuni","c":"grigio"},{"id":6,"e":"\ud83d\udde3\ufe0f","w":"chiamano","c":"verde"},{"id":7,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":8,"e":"\u2194\ufe0f","w":"come","c":"grigio"},{"id":9,"e":"\u271d\ufe0f","w":"Ges\u00f9 Cristo","c":"arancio"}]},{"id":3,"title":"800 anni dalla morte","tiles":[{"id":10,"e":"\u231b","w":"sono passati","c":"verde"},{"id":11,"e":"\ud83d\udcc5","w":"800 anni","c":"viola"},{"id":12,"e":"\ud83d\udc80","w":"morte","c":"giallo"},{"id":13,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"}]},{"id":4,"title":"Vita semplice","tiles":[{"id":14,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":15,"e":"\u2764\ufe0f","w":"ama","c":"verde"},{"id":16,"e":"\ud83c\udf31","w":"vita","c":"giallo"},{"id":17,"e":"\ud83c\udf43","w":"semplice","c":"blu"}]},{"id":5,"title":"Silenzio e natura","tiles":[{"id":18,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":19,"e":"\u2764\ufe0f","w":"ama","c":"verde"},{"id":20,"e":"\ud83e\udd2b","w":"silenzio","c":"giallo"},{"id":21,"e":"\u2795","w":"e","c":"rosa"},{"id":22,"e":"\ud83c\udf3f","w":"natura","c":"giallo"}]},{"id":6,"title":"Eremo delle Carceri","tiles":[{"id":23,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":24,"e":"\ud83c\udfe0","w":"vive","c":"verde"},{"id":25,"e":"\u26e9\ufe0f","w":"Eremo delle Carceri","c":"arancio"}]},{"id":7,"title":"Aiuta gli altri","tiles":[{"id":26,"e":"\u2194\ufe0f","w":"per\u00f2","c":"rosa"},{"id":27,"e":"\u271d\ufe0f\ud83e\uddd1","w":"San Francesco","c":"arancio"},{"id":28,"e":"\ud83e\udd1d","w":"aiuta","c":"verde"},{"id":29,"e":"\ud83d\udc65","w":"altri","c":"giallo"}]}]}
-</script>
-
-<script>
-/* ═══════════════════════════════════════════════
-   DIZIONARIO EMOJI — tutte le categorie Unicode
-═══════════════════════════════════════════════ */
-const EMOJIS = {
-"😀 Emozioni e stati":[
-"😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"
-],
-"👋 Gesti e mani":[
-"👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🫀","🫁","🧠","🦷","🦴","👀","👁️","👅","👄","🫦"
-],
-"👤 Persone e ruoli":[
-"👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🧏","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","🥷","👷","🫅","🤴","👸","👳","👲","🧕","🤵","👰","🤰","🫃","🫄","🤱","👼","🎅","🤶","🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🎓","👨‍🎓","👩‍🎓","🧑‍🏫","👨‍🏫","👩‍🏫","🧑‍⚖️","👨‍⚖️","👩‍⚖️","🧑‍🌾","👨‍🌾","👩‍🌾","🧑‍🍳","👨‍🍳","👩‍🍳","🧑‍🔧","👨‍🔧","👩‍🔧","🧑‍🎨","👨‍🎨","👩‍🎨","🧑‍✈️","👨‍✈️","👩‍✈️","🧑‍💼","👨‍💼","👩‍💼","🧑‍🔬","👨‍🔬","👩‍🔬","🧑‍💻","👨‍💻","👩‍💻","🧙","🦸","🦹","🧚","🧜","🧝","🧞","🧟","🧌","🦊","👯","🕴️","👫","👬","👭","💑","💏","👨‍👩‍👦","👨‍👩‍👧","👪","👥","👤","🫂","🪖","⚔️","🕊️"
-],
-"🐶 Animali":[
-"🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐔","🐧","🐦","🐦‍⬛","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🫎","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪲","🦟","🦗","🪳","🕷️","🦂","🐢","🐍","🦎","🦖","🦕","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🫏","🐕","🐕‍🦺","🦮","🐩","🐈","🐈‍⬛","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔","🐾","🐉","🐲","🦑","🐙","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🪸","🪼","🐚","🌊"
-],
-"🌱 Natura e piante":[
-"🌵","🌲","🌳","🌴","🪵","🌱","🌿","☘️","🍀","🎍","🪴","🎋","🍃","🍂","🍁","🍄","🌾","💐","🌷","🌹","🥀","🪷","🌺","🌸","🌼","🌻","🌞","⭐","🌟","✨","💫","⚡","☄️","💥","🔥","🌈","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️","⛄","🌬️","💨","🌪️","🌫️","🌊","💧","💦","🫧","🌀","🌈","🏔️","⛰️","🌋","🗻","🏕️","🏖️","🏜️","🏝️","🏞️","🌍","🌎","🌏","🌐","🌕","🌖","🌗","🌘","🌑","🌒","🌓","🌔","🌙","🌛","🌜","🌚","🪐","💫","🌠","🌌"
-],
-"🍎 Cibo e bevande":[
-"🍏","🍎","🍐","🍊","🍋","🍋‍🟩","🍌","🍉","🍇","🍓","🫐","🍈","🍑","🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🧄","🧅","🥔","🌽","🥕","🫛","🧆","🥜","🫘","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🦴","🌭","🍔","🍟","🍕","🫔","🌮","🌯","🥙","🧆","🍜","🍝","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚","🍘","🍥","🥮","🍢","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🍩","🍪","🌰","🥜","🫘","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🫗","🥃","🍸","🍹","🍾","🧊","💧","🥛","🍼","🫖"
-],
-"✈️ Trasporti":[
-"🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🏍️","🛵","🛺","🚲","🛴","🛹","🛼","🚏","🛣️","🗺️","⛽","🚦","🚥","🚧","⚓","🛟","⛵","🚤","🛥️","🛳️","⛴️","🚢","✈️","🛩️","🛫","🛬","🪂","💺","🚁","🛸","🚀","🛶","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚋","🚌","🚍","🚎","🏎️","🚐","🚑","🚒","🚓","🚔","🚕","🚖","🚗","🚘","🚙","🚚","🚛","🚜","🚡","🚠","🚟","🚃","🛤️","🛣️","🗺️","🧭"
-],
-"🏠 Luoghi e edifici":[
-"🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩️","🏗️","🏘️","🏚️","🏙️","🌃","🌆","🌇","🌉","🌁","🌄","🌅","📍","📌","🗺️","🏕️","🏖️","🏜️","🏝️","🏞️","⛰️","🌋","🗻","🏔️","🌊","🏟️","🎡","🎢","🎠","⛲","⛺","🏕️","🪨","🌐"
-],
-"🎮 Attività e sport":[
-"⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🏓","🏸","🏒","🥍","🏑","🏏","🎳","🏹","🎣","🤿","🥊","🥋","⛳","🎿","🛷","🛹","🛼","🪃","🪁","🏋️","🤼","🤸","⛹️","🤺","🏇","🧘","🏌️","🏊","🚣","🧗","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖️","🎭","🎨","🖌️","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🪘","🥁","🎷","🎺","🎸","🪕","🎻","🪗","🎮","🕹️","🎲","🎯","🎪","🎠","🎡","🎢","🎭","🎨","🖼️","🎏","🎀","🎁","🎊","🎉","🎈"
-],
-"📚 Oggetti e strumenti":[
-"💻","🖥️","🖨️","⌨️","🖱️","💾","💿","📱","☎️","📞","📟","📠","📺","📻","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡","🔋","🪫","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💰","💳","💎","⚖️","🪝","🔧","🔨","⚒️","🛠️","⛏️","🔩","🪛","🔗","⛓️","🧲","🪜","🧰","🗑️","🔓","🔒","🔐","🗝️","🔑","🚪","🪟","🛋️","🪑","🛏️","🛁","🪠","🧴","🧷","🧹","🧺","🧻","🪣","🧼","🫧","🪥","🧽","🧹","🪒","✂️","🗃️","🗂️","🗄️","📥","📤","📦","📧","📝","✏️","✒️","🖊️","📓","📔","📒","📕","📗","📘","📙","📚","📖","🔖","🏷️","💵","🪙","💸","📊","📈","📉","📋","📌","📍","🗺️","🌐","🔬","🔭","🧪","🧫","🧬","💊","💉","🩸","🩹","🩺","🩻","🏥","🩼","🦽","🦼","🛒","🎒","👝","👛","👜","💼","🧳","🌂","☂️"
-],
-"✝️ Religione e cultura":[
-"✝️","☪️","✡️","☸️","☯️","✝️","☦️","🛐","🕉️","⛎","♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓","🔯","🪬","🧿","🕎","🔱","⚜️","🔰","♻️","☮️","🕊️","🙏","📿","⛪","🕌","🛕","🕍","⛩️","🧎","🪔","🕯️","📖","✝️👤","📖✝️","🏛️","🎭","🎨","🖼️","🎼","🎵","🎶","📜","🏺","🧿","🌍","🗺️","🌐"
-],
-"❤️ Cuori e sentimenti":[
-"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","💕","💞","💓","💗","💖","💘","💝","💟","🫀","💌","💋","💍","💒","🫶","🤝","🫂","👐","🙌","🤗","😍","🥰","😊","🌹","🌺","🌸","🎀","🎁","🌈","✨","⭐","💫","🌟","🕊️","☮️"
-],
-"⏰ Tempo e calendario":[
-"⏰","⌛","⏳","📅","📆","🗓️","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚","🕛","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦","🕧","⌚","🕰️","⏱️","⏲️","☀️","🌙","🌅","🌄","🌇","🌆","🌃","🌉","🌌","🌠","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌛","🌜","🌚","📅","⬅️","➡️","⏩","⏪","⏫","⏬","🔄","🔃","⏭️","⏮️"
-],
-"🔢 Simboli e segni":[
-"0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","💯","#️⃣","*️⃣","⬆️","⬇️","⬅️","➡️","↩️","↪️","⤴️","⤵️","🔄","🔃","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","⏸️","⏹️","⏺️","🔅","🔆","📶","📳","📴","🔇","🔈","🔉","🔊","📣","📢","🔔","🔕","🎵","🎶","✅","❎","➕","➖","✖️","➗","🟰","♾️","‼️","⁉️","❓","❔","❗","❕","〰️","⭕","❌","🚫","⛔","📵","🟢","🟡","🟠","🔴","⚫","⚪","🟣","🔵","🟤","🔶","🔷","🔸","🔹","🔺","🔻","▪️","▫️","◾","◽","◼️","◻️","⬛","⬜","🟥","🟧","🟨","🟩","🟦","🟪","🟫","🔲","🔳","⚡","🔥","💧","🌊","💨","⭐","💫","✨","🌟","💥","❄️","🌈"
-]
+// ════════════════════════════════════════════════════════════════════════════
+// DIZIONARIO EMOJICODE per categorie semantiche
+// ════════════════════════════════════════════════════════════════════════════
+const EMOJI_DICT = {
+  'Persone e ruoli': ['👤','👨','👩','🧒','👴','👵','👑','🤴','👸','👨‍🏫','👩‍🏫','✝️','🪖','⚔️','👨‍⚖️','🧙','👨‍🎨','🧑‍🌾','👨‍🍳','🧑‍🎓','👨‍💼','🧑‍🔧'],
+  'Verbi / Azioni':  ['✍️','📖','🗣️','👂','👀','🤔','🏃','🚶','🛌','🍽️','💤','🙏','🏗️','⚔️','🎓','🌱','💀','😂','😢','💑','🤝','🎵','🎤','🎭','🏆','🚀','🛐'],
+  'Oggetti culturali': ['📚','📜','📝','🏷️','📕','📗','📘','📙','📓','✒️','🖋️','🎨','🖼️','🏺','🎭','🎼','🎻','🎹','🎤','📰','💌','🎬','🗿'],
+  'Edifici e luoghi': ['🏠','🏛️','🏫','⛪','🕌','🕍','🏰','🏯','🏟️','🌍','🌎','🗺️','🏙️','🏞️','🏔️','🏖️','🏝️','🏕️','📍','🚪','🪟','🛣️'],
+  'Tempo': ['⌛','⏳','⏰','🕐','📅','📆','🗓️','➡️','⬅️','🔄','🌅','🌄','🌃','🌙','☀️','🌟'],
+  'Connettivi / Logica': ['➕','❌','❓','❗','↔️','⚡','🔀','✅','⛔','💡','🎯','♻️'],
+  'Concetti astratti': ['💭','💖','💔','😨','😡','😱','🌟','🔥','💧','🌊','🕊️','🦅','🌈','🎭','⚖️','🗝️','🔓','🔒','💎'],
+  'Natura': ['🌱','🌳','🌲','🌴','🌵','🌷','🌸','🌹','🌻','🍀','🍃','🍂','🐦','🐺','🦁','🐎','🐂','🐑','🐍','🦋'],
+  'Numeri / Simboli': ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','💯','#️⃣','✖️','➖','💲','€'],
 };
 
-/* ═══════════════════════════════════════════════
-   FITZGERALD
-═══════════════════════════════════════════════ */
-const FIT = {
-  giallo:  {bg:"#FFFDE7",lbl:"#F9A825",name:"Sostantivo",  dot:"🟡"},
-  arancio: {bg:"#FFF8E1",lbl:"#EF6C00",name:"Nome proprio",dot:"🟠"},
-  verde:   {bg:"#F1F8E9",lbl:"#388E3C",name:"Verbo",       dot:"🟢"},
-  blu:     {bg:"#E3F2FD",lbl:"#1565C0",name:"Agg./Avv.",   dot:"🔵"},
-  viola:   {bg:"#F3E5F5",lbl:"#7B1FA2",name:"Tempo",       dot:"🟣"},
-  rosa:    {bg:"#FCE4EC",lbl:"#C2185B",name:"Cong.",       dot:"🩷"},
-  grigio:  {bg:"#F5F5F5",lbl:"#9E9E9E",name:"Funzionale",  dot:"⬜"},
+// ════════════════════════════════════════════════════════════════════════════
+// VALIDATORE DIDATTICO
+// ════════════════════════════════════════════════════════════════════════════
+
+// Forme verbali NON ammesse in CAA (passato remoto, congiuntivo, condizionale, trapassato)
+// Usiamo lookup di radici/forme + pattern morfologici tipici
+const FORBIDDEN_VERB_FORMS = new Set([
+  // Passato remoto comuni
+  'fu','furono','fui','fummo','foste','ebbi','ebbe','ebbero','avesti','aveste',
+  'andò','andai','andarono','andasti','andaste','andammo',
+  'disse','dissi','dissero','dicesti','diceste','dicemmo',
+  'fece','feci','fecero','facesti','faceste','facemmo',
+  'vide','vidi','videro','vedesti','vedeste','vedemmo',
+  'venne','venni','vennero','venisti','veniste','venimmo',
+  'prese','presi','presero','prendesti','prendeste','prendemmo',
+  'mise','misi','misero','mettesti','metteste','mettemmo',
+  'scrisse','scrissi','scrissero','scrivesti','scriveste','scrivemmo',
+  'lesse','lessi','lessero','leggesti','leggeste','leggemmo',
+  'nacque','nacqui','nacquero','nascesti','nasceste','nascemmo',
+  'morì','morii','morirono','moristi','moriste','morimmo',
+  'visse','vissi','vissero','vivesti','viveste','vivemmo',
+  'rispose','risposi','risposero','rispondesti','rispondeste','rispondemmo',
+  'parlò','parlai','parlarono','componeva','compose','composero',
+  'narrò','narrarono','si rifugiarono','rifugiò','copiò','copiarono',
+  // Congiuntivo / condizionale tipici
+  'fosse','fossero','fossi','fossimo','foste',
+  'avesse','avessero','avessi','avessimo','aveste',
+  'sarebbe','sarebbero','sarei','saresti','saremmo','sareste',
+  'avrebbe','avrebbero','avrei','avresti','avremmo','avreste',
+  'vorrebbe','vorrei','vorresti','vorremmo','vorrebbero',
+  'dovrebbe','dovrei','dovresti','dovremmo','dovrebbero',
+  'potrebbe','potrei','potresti','potremmo','potrebbero',
+]);
+
+// Pattern morfologici sospetti (suffissi tipici dei tempi vietati)
+const FORBIDDEN_PATTERNS = [
+  { regex: /\b\w+(?:arono|erono|irono|ettero)\b/i, label: 'passato remoto (3ª pers. plurale)' },
+  { regex: /\b\w+(?:asti|esti|isti)\b/i, label: 'passato remoto (2ª pers. singolare)' },
+  { regex: /\b\w+(?:ammo|emmo|immo)\b/i, label: 'passato remoto (1ª pers. plurale)' },
+  { regex: /\b\w+(?:assi|essi|issi)\b/i, label: 'congiuntivo imperfetto' },
+  { regex: /\b\w+(?:erei|irei|eresti|iresti|eremmo|iremmo|erebbero|irebbero)\b/i, label: 'condizionale' },
+  { regex: /\bavev\w+\s+\w+(?:to|so|ato|uto|ito)\b/i, label: 'trapassato prossimo (sostituire con "prima ha…")' },
+  { regex: /\beran\w*\s+\w+(?:to|so|ato|uto|ito)\b/i, label: 'trapassato prossimo (sostituire con "prima…")' },
+  { regex: /\bè\s+stat\w+\b/i, label: 'forma passiva (girare in attiva)' },
+  { regex: /\bsono\s+stat\w+\b/i, label: 'forma passiva (girare in attiva)' },
+  { regex: /\bvenne\s+\w+(?:to|so|ato|uto|ito)\b/i, label: 'forma passiva (girare in attiva)' },
+  { regex: /\bvennero\s+\w+(?:to|so|ato|uto|ito)\b/i, label: 'forma passiva (girare in attiva)' },
+];
+
+// Mini-dizionario semantico per coerenza Fitzgerald
+// (lookup grezzo, segnala possibili discordanze fra parola e colore scelto)
+const FITZGERALD_HINTS = {
+  giallo: new Set(['libro','libri','scuola','mamma','papà','casa','tavolo','sedia','penna','quaderno','maestra','bambino','bambina','amico','amica','cane','gatto','sole','luna','mare','cielo','fiore','albero','città','paese','famiglia','fratello','sorella','nonno','nonna','pane','acqua','cibo','gioco','sport','musica','arte','storia','giorno','momento','cosa','persona','gente','uomo','donna','ragazzo','ragazza','monaco','monaci','monastero','biblioteca','manoscritto','manoscritti','pergamena','inchiostro','opera','testo','parola','frase','lingua','autore','poeta','scrittore','lettore','lavoro','peste','contagio','villa','copia','padre','madre','figlio','figlia']),
+  verde: new Set(['scrivere','scritto','scrive','scrivono','scriviamo','scrivete','leggere','letto','legge','leggono','parlare','parla','parlano','andare','va','vanno','vedere','visto','vede','vedono','sapere','sa','sanno','dare','dà','danno','stare','sta','stanno','dovere','deve','devono','potere','può','possono','volere','vuole','vogliono','sentire','sente','sentono','mangiare','mangia','mangiano','bere','beve','bevono','dormire','dorme','dormono','correre','corre','corrono','camminare','cammina','camminano','giocare','gioca','giocano','studiare','studia','studiano','lavorare','lavora','lavorano','pensare','pensa','pensano','amare','ama','amano','aiutare','aiuta','aiutano','cercare','cerca','cercano','trovare','trova','trovano','comprare','compra','comprano','aprire','apre','aprono','chiudere','chiude','chiudono','iniziare','inizia','iniziano','finire','finisce','finiscono','nascere','nato','nata','vivere','vive','vivono','abitare','abita','abitano','guardare','guarda','guardano','ascoltare','ascolta','ascoltano','rispondere','risponde','rispondono','chiedere','chiede','chiedono','prendere','prende','prendono','mettere','mette','mettono','portare','porta','portano','tornare','torna','tornano','partire','parte','partono','arrivare','arriva','arrivano','entrare','entra','entrano','uscire','esce','escono','è','sono','ha','hanno','fare','fa','fanno','dire','dice','dicono','racconta','raccontano','narra','narrano','considera','considerano','chiama','chiamano','intitola','intitolano','compone','compongono','ha scritto','si chiama','sono morti','è morto','è morta','è nato','è nata','custodisce','custodiscono','rifugiò','rifugiarono','copia','copiavano','copiano']),
+  blu: new Set(['bello','brutto','grande','piccolo','buono','cattivo','nuovo','vecchio','giovane','caro','lungo','corto','alto','basso','forte','debole','felice','triste','contento','arrabbiato','simpatico','antipatico','rosso','blu','verde','giallo','nero','bianco','velocemente','lentamente','bene','male','molto','poco','tanto','sempre','mai','spesso','qui','là','tardi','presto','subito','dopo','prima','importante','famoso','celebre','antico','antichi','antichissimi','moderno','medievale','italiano','latino','sacro','sacri','costoso','costosi']),
+  viola: new Set(['ieri','oggi','domani','mattina','pomeriggio','sera','notte','lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica','gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre','primavera','estate','autunno','inverno','secolo','anno','epoca','era','periodo','medioevo','rinascimento','trecento','quattrocento','cinquecento','seicento','settecento','ottocento','novecento','duemila','tanto tempo fa','ora','adesso','tempo','1304','1348','1265']),
+  rosa: new Set(['e','ma','perché','quindi','però','allora','così','anche','inoltre','tuttavia','mentre','quando','se','oppure','invece','cioè','infatti','poi','dopo']),
+  grigio: new Set(['il','lo','la','i','gli','le','un','uno','una','di','a','da','in','con','su','per','tra','fra','questo','questa','questi','queste','quello','quella','quelli','quelle','io','tu','lui','lei','noi','voi','loro','mi','ti','si','ci','vi','ne','che','chi','cui','come','dove','mio','tuo','suo','nostro','vostro']),
+  // arancio si riconosce dalla Maiuscola iniziale
 };
 
-/* ═══════════════════════════════════════════════
-   GENERATORE HTML STATICO
-═══════════════════════════════════════════════ */
-function buildStaticHTML(data) {
-  const rows = data.nuclei.map((n,i)=>{
-    const tiles = n.tiles.map(t=>
-      `<div class="tile ${t.c}"><div class="te">${t.e}</div><div class="tl">${t.w}</div></div>`
-    ).join('');
-    return `<div class="nucleus"><div class="nt">FRASE ${i+1} – ${n.title.toUpperCase()}</div><div class="row">${tiles}</div></div>`;
-  }).join('');
-  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${data.title}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F2F2F0;padding:32px 24px}.dt{text-align:center;font-size:13px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px}.lg{text-align:center;font-size:10px;color:#888;margin-bottom:32px}.nucleus{margin-bottom:36px}.nt{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:12px}.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.tile{width:108px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-shrink:0}.te{background:#fff;padding:14px 8px 10px;text-align:center;font-size:36px;min-height:72px;display:flex;align-items:center;justify-content:center}.tl{padding:7px 5px;text-align:center;font-weight:800;font-size:9.5px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.3;min-height:32px;display:flex;align-items:center;justify-content:center}.giallo .te{background:#FFFDE7}.giallo .tl{background:#F9A825}.arancio .te{background:#FFF8E1}.arancio .tl{background:#EF6C00}.verde .te{background:#F1F8E9}.verde .tl{background:#388E3C}.blu .te{background:#E3F2FD}.blu .tl{background:#1565C0}.viola .te{background:#F3E5F5}.viola .tl{background:#7B1FA2}.rosa .te{background:#FCE4EC}.rosa .tl{background:#C2185B}.grigio .te{background:#F5F5F5}.grigio .tl{background:#9E9E9E}@media print{body{background:#fff;padding:16px}.tile{box-shadow:none;border:1px solid #ddd}}</style></head><body><div class="dt">${data.title}</div><div class="lg">🟡 sostantivo · 🟠 nome proprio · 🟢 verbo · 🔵 agg/avv · 🟣 tempo · 🩷 cong. · ⬜ funzionale</div>${rows}</body></html>`;
-}
+// Calcola tutti i warning per un progetto
+function validateProject(project) {
+  if (!project) return [];
+  const warnings = [];
 
-/* ═══════════════════════════════════════════════
-   VUE APP
-═══════════════════════════════════════════════ */
-let _id = 100;
-const uid = () => ++_id;
-const {createApp,ref,computed,reactive,nextTick} = Vue;
-
-createApp({
-  data(){
-    const raw = document.getElementById('caa-data').textContent;
-    const stored = JSON.parse(raw);
-    return {
-      data: stored,
-      sel: null,
-      showPk: false,
-      pkQ: '',
-      pkCat: Object.keys(EMOJIS)[0],
-      editTtl: false,
-      editN: null,
-      loading: false,
-      loadMsg: '',
-      toast: null,
-      pdfFlash: false,
-      showImp: false,
-      impTxt: '',
-    };
-  },
-  computed:{
-    FIT(){ return FIT; },
-    eCats(){ return Object.keys(EMOJIS); },
-    selT(){
-      if(!this.sel) return null;
-      const n = this.data.nuclei.find(n=>n.id===this.sel.nid);
-      return n?.tiles.find(t=>t.id===this.sel.tid)??null;
-    },
-    pkList(){
-      const q = this.pkQ.trim();
-      if(!q) return EMOJIS[this.pkCat]||[];
-      return Object.values(EMOJIS).flat().filter(e=>e.includes(q));
-    }
-  },
-  methods:{
-    selTile(nid,tid){
-      if(this.sel?.nid===nid&&this.sel?.tid===tid){this.sel=null;this.showPk=false;}
-      else{this.sel={nid,tid};this.showPk=false;}
-    },
-    closePan(){this.sel=null;this.showPk=false;},
-    upd(k,v){
-      if(!this.sel)return;
-      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
-      const t=n?.tiles.find(t=>t.id===this.sel.tid);
-      if(t)t[k]=v;
-    },
-    delT(){
-      if(!this.sel)return;
-      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
-      if(n)n.tiles=n.tiles.filter(t=>t.id!==this.sel.tid);
-      this.closePan();
-    },
-    movT(dir){
-      if(!this.sel)return;
-      const n=this.data.nuclei.find(n=>n.id===this.sel.nid);
-      if(!n)return;
-      const idx=n.tiles.findIndex(t=>t.id===this.sel.tid);
-      if(idx+dir<0||idx+dir>=n.tiles.length)return;
-      const a=[...n.tiles];[a[idx],a[idx+dir]]=[a[idx+dir],a[idx]];n.tiles=a;
-    },
-    addTile(nid){
-      const tid=uid();
-      const n=this.data.nuclei.find(n=>n.id===nid);
-      if(!n)return;
-      n.tiles.push({id:tid,e:"❓",w:"parola",c:"giallo"});
-      this.sel={nid,tid};this.showPk=false;
-    },
-    pickE(e){this.upd('e',e);this.showPk=false;},
-    moveN(nid,dir){
-      const a=this.data.nuclei;const idx=a.findIndex(n=>n.id===nid);
-      if(idx+dir<0||idx+dir>=a.length)return;
-      [a[idx],a[idx+dir]]=[a[idx+dir],a[idx]];
-    },
-    delN(nid){
-      if(this.data.nuclei.length===1)return;
-      this.data.nuclei=this.data.nuclei.filter(n=>n.id!==nid);
-      if(this.sel?.nid===nid)this.closePan();
-    },
-    addN(){
-      const nid=uid();const tid=uid();
-      this.data.nuclei.push({id:nid,title:"Nuova frase",tiles:[{id:tid,e:"❓",w:"parola",c:"giallo"}]});
-      this.sel={nid,tid};this.showPk=false;
-    },
-    outside(e){
-      if(!this.sel)return;
-      const p=this.$refs.panelRef;
-      if(!p?.contains(e.target)&&!e.target.closest('[data-tile]'))this.closePan();
-    },
-    showT(msg,ms=2500){
-      this.toast=msg;clearTimeout(this._tt);
-      this._tt=setTimeout(()=>{this.toast=null;},ms);
-    },
-    doExpJSON(){
-      const b=new Blob([JSON.stringify(this.data,null,2)],{type:'application/json'});
-      const u=URL.createObjectURL(b);const a=document.createElement('a');
-      a.href=u;a.download='dati_caa.json';a.click();URL.revokeObjectURL(u);
-      this.showT('📤 Dati JSON esportati!');
-    },
-    doImport(){
-      try{
-        const p=JSON.parse(this.impTxt);
-        if(!p.title||!Array.isArray(p.nuclei))throw new Error('Formato non valido');
-        this.data=p;this.showImp=false;this.impTxt='';this.closePan();
-        this.showT('📥 Importazione completata!');
-      }catch(e){alert('Errore: '+e.message);}
-    },
-    doSaveHTML(){
-      // Salva l'intera pagina con i dati aggiornati
-      const newData = JSON.stringify(this.data);
-      let html = document.documentElement.outerHTML;
-      // Replace the JSON in the script tag
-      html = html.replace(
-        /(<script id="caa-data" type="application\/json">)([\s\S]*?)(<\/script>)/,
-        `$1\n${newData}\n$3`
-      );
-      const b=new Blob([html],{type:'text/html'});
-      const u=URL.createObjectURL(b);const a=document.createElement('a');
-      a.href=u;a.download='editor_caa.html';a.click();URL.revokeObjectURL(u);
-      this.showT('💾 Editor salvato con i tuoi dati!');
-    },
-    buildPZ(){
-      document.getElementById('pz-ttl').textContent=this.data.title;
-      const body=document.getElementById('pz-body');body.innerHTML='';
-      this.data.nuclei.forEach((n,i)=>{
-        const nd=document.createElement('div');nd.className='pz-n';
-        const tt=document.createElement('div');tt.className='pz-nt';
-        tt.textContent=`FRASE ${i+1} – ${n.title.toUpperCase()}`;nd.appendChild(tt);
-        const rw=document.createElement('div');rw.className='pz-row';
-        n.tiles.forEach(t=>{
-          const td=document.createElement('div');td.className=`pz-tile ${t.c}`;
-          td.innerHTML=`<div class="pz-te">${t.e}</div><div class="pz-tl">${t.w}</div>`;
-          rw.appendChild(td);
-        });
-        nd.appendChild(rw);body.appendChild(nd);
+  project.nuclei.forEach((nucleus, ni) => {
+    if (nucleus.tiles.length === 0) {
+      warnings.push({
+        level: 'warning',
+        nucleusIdx: ni + 1,
+        text: `Il nucleo "${nucleus.title}" è vuoto.`,
+        suggestion: 'Aggiungi almeno un simbolo CAA o eliminalo.'
       });
-    },
-    async doExpPDF(){
-      if(typeof html2canvas==='undefined'||typeof window.jspdf==='undefined'){
-        this.showT('⚠️ Librerie non caricate. Ricarica la pagina.');return;
-      }
-      this.loading=true;this.loadMsg='Preparazione PDF…';
-      try{
-        this.buildPZ();
-        await nextTick();
-        const pz=document.getElementById('pz');
-        pz.style.left='0px';pz.style.visibility='hidden';
-        await new Promise(r=>setTimeout(r,300));
-        const canvas=await html2canvas(pz,{
-          scale:2,useCORS:true,backgroundColor:'#F2F2F0',logging:false,allowTaint:true
+    }
+
+    nucleus.tiles.forEach((tile, ti) => {
+      const wordRaw = (tile.word || '').trim();
+      if (!wordRaw) return;
+      const wordLow = wordRaw.toLowerCase();
+
+      // 1) Tempi verbali vietati
+      if (FORBIDDEN_VERB_FORMS.has(wordLow)) {
+        warnings.push({
+          level: 'error',
+          tileId: tile.id,
+          nucleusIdx: ni + 1,
+          text: `Nucleo ${ni+1}, "${wordRaw}": forma verbale non ammessa in CAA.`,
+          suggestion: 'In CAA si usano solo presente e passato prossimo.'
         });
-        pz.style.left='-9999px';pz.style.visibility='visible';
-        const img=canvas.toDataURL('image/png');
-        const {jsPDF}=window.jspdf;
-        const W=210,H=297;
-        const cw=canvas.width/2,ch=canvas.height/2;
-        const mmW=cw*25.4/96,mmH=ch*25.4/96;
-        const scale=W/mmW;
-        const finalH=mmH*scale;
-        const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-        if(finalH<=H){
-          doc.addImage(img,'PNG',0,0,W,finalH);
-        } else {
-          let off=0;
-          doc.addImage(img,'PNG',0,0,W,finalH);
-          let left=Math.ceil(finalH/H)-1;
-          off=H;
-          while(left>0){
-            doc.addPage();
-            doc.addImage(img,'PNG',0,-off,W,finalH);
-            off+=H;left--;
+      } else {
+        for (const pat of FORBIDDEN_PATTERNS) {
+          if (pat.regex.test(wordRaw)) {
+            warnings.push({
+              level: 'warning',
+              tileId: tile.id,
+              nucleusIdx: ni + 1,
+              text: `Nucleo ${ni+1}, "${wordRaw}": possibile ${pat.label}.`,
+              suggestion: 'Verifica e converti in presente o passato prossimo.'
+            });
+            break;
           }
         }
-        doc.save('tavola_caa.pdf');
-        this.pdfFlash=true;setTimeout(()=>this.pdfFlash=false,2500);
-        this.showT('📄 PDF scaricato!');
-      }catch(err){
-        console.error(err);
-        alert('Errore PDF. Prova con Ctrl+P → Salva come PDF.');
-      }finally{this.loading=false;}
+      }
+
+      // 2) Coerenza Fitzgerald
+      // Se la parola è capitalizzata (probabile nome proprio) ma il colore non è arancio
+      const firstChar = wordRaw.charAt(0);
+      const startsUpper = firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase();
+      if (startsUpper && !wordRaw.match(/^(Si\b|Il\b|Lo\b|La\b|Un\b|Questo\b|Quello\b)/) && tile.color !== 'arancio' && wordRaw.length > 2) {
+        warnings.push({
+          level: 'warning',
+          tileId: tile.id,
+          nucleusIdx: ni + 1,
+          text: `Nucleo ${ni+1}, "${wordRaw}": parola con maiuscola, di solito è un nome proprio.`,
+          suggestion: 'Considera il colore arancio (nome proprio).'
+        });
+      } else if (!startsUpper) {
+        // Lookup nel dizionario per categoria attesa
+        let expectedColor = null;
+        for (const [color, set] of Object.entries(FITZGERALD_HINTS)) {
+          if (set.has(wordLow)) {
+            expectedColor = color;
+            break;
+          }
+        }
+        if (expectedColor && expectedColor !== tile.color) {
+          const expectedName = FITZGERALD.find(f => f.key === expectedColor)?.short || expectedColor;
+          const currentName = FITZGERALD.find(f => f.key === tile.color)?.short || tile.color;
+          warnings.push({
+            level: 'warning',
+            tileId: tile.id,
+            nucleusIdx: ni + 1,
+            text: `Nucleo ${ni+1}, "${wordRaw}": ora è ${currentName.toLowerCase()}, ma di solito è ${expectedName.toLowerCase()}.`,
+            suggestion: `Verifica se il colore corretto è ${expectedColor}.`
+          });
+        }
+      }
+    });
+
+    // 3) Articoli/preposizioni eccessivi
+    const grigioCount = nucleus.tiles.filter(t => t.color === 'grigio').length;
+    if (grigioCount >= 3 && grigioCount > nucleus.tiles.length / 2) {
+      warnings.push({
+        level: 'warning',
+        nucleusIdx: ni + 1,
+        text: `Nucleo ${ni+1}: ${grigioCount} parole funzionali (articoli, pronomi).`,
+        suggestion: 'In CAA si tendono a omettere se non essenziali. Considera di rimuoverne alcune.'
+      });
     }
-  },
-  mounted(){
-    document.addEventListener('mousedown',this.outside);
-  },
-  beforeUnmount(){
-    document.removeEventListener('mousedown',this.outside);
+  });
+
+  return warnings;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// UTILITÀ
+// ════════════════════════════════════════════════════════════════════════════
+const uid = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+const STORAGE_KEY = 'atelier_caa_data_v2';
+const SCHEMA_VERSION = 2;
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.schemaVersion !== SCHEMA_VERSION) {
+      // Migrazione possibile da v1 a v2
+      if (parsed.schemaVersion === 1 && parsed.projects) {
+        parsed.projects.forEach(p => {
+          if (!p.mode) p.mode = 'libera';
+        });
+        parsed.schemaVersion = SCHEMA_VERSION;
+      } else {
+        return null;
+      }
+    }
+    return parsed;
+  } catch (e) {
+    console.error('Errore lettura archivio:', e);
+    return null;
   }
-}).mount('#app');
+}
+
+function saveToStorage(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...data,
+      schemaVersion: SCHEMA_VERSION,
+      lastSaved: new Date().toISOString()
+    }));
+    return true;
+  } catch (e) {
+    console.error('Errore scrittura archivio:', e);
+    return false;
+  }
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function emptyProject(title = 'Nuova traduzione CAA', mode = 'libera') {
+  return {
+    id: uid(),
+    title,
+    mode, // 'libera' o 'guidata'
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    originalText: '',
+    currentStep: 1,
+    completedSteps: [],
+    step1Analysis: { passive: false, subordinate: false, hiddenSubject: false, ambiguousPronoun: false, forbiddenTense: false, abstractWord: false, notes: '' },
+    step2Nuclei: [], // [{id, raw}]
+    step3Simplified: {}, // { nucleusIdx: 'frase semplificata' }
+    step4Lexicon: [], // [{original, caa}]
+    nuclei: [
+      {
+        id: uid(),
+        title: 'Nucleo 1',
+        tiles: []
+      }
+    ]
+  };
+}
+
+function exampleProject() {
+  return {
+    id: uid(),
+    title: 'Esempio: Summa Theologiae',
+    mode: 'libera',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    originalText: 'Questo libro è stato scritto nel XIII secolo da San Tommaso d\'Aquino e si intitola Summa Theologiae.',
+    currentStep: 7,
+    completedSteps: [1,2,3,4,5,6,7],
+    step1Analysis: { passive: true, subordinate: false, hiddenSubject: false, ambiguousPronoun: false, forbiddenTense: false, abstractWord: false, notes: '' },
+    step2Nuclei: [],
+    step3Simplified: {},
+    step4Lexicon: [],
+    nuclei: [
+      {
+        id: uid(),
+        title: 'FRASE 1 — IDENTIFICAZIONE',
+        tiles: [
+          { id: uid(), color: 'grigio',  emoji: '👆', word: 'Questo',           isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',             isText: false },
+          { id: uid(), color: 'verde',   emoji: '🏷️', word: 'Si chiama',         isText: false },
+          { id: uid(), color: 'arancio', emoji: 'Summa\nTheologiae', word: 'Summa Theologiae', isText: true },
+        ]
+      },
+      {
+        id: uid(),
+        title: 'FRASE 2 — AUTORE',
+        tiles: [
+          { id: uid(), color: 'arancio', emoji: '✝️', word: "San Tommaso d'Aquino", isText: false },
+          { id: uid(), color: 'verde',   emoji: '✍️', word: 'Ha scritto',           isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',                isText: false },
+        ]
+      },
+      {
+        id: uid(),
+        title: 'FRASE 3 — TEMPO',
+        tiles: [
+          { id: uid(), color: 'viola', emoji: '⌛', word: 'Tanto tempo fa', isText: false },
+          { id: uid(), color: 'viola', emoji: 'XIII\nsecolo', word: '1200', isText: true },
+        ]
+      }
+    ]
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SINTESI VOCALE (Web Speech API con fallback)
+// ════════════════════════════════════════════════════════════════════════════
+const speechAvailable = () => 'speechSynthesis' in window;
+
+function speakText(text, opts = {}) {
+  if (!speechAvailable()) return false;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'it-IT';
+    u.rate = opts.rate || 0.85;
+    u.pitch = opts.pitch || 1.0;
+    speechSynthesis.speak(u);
+    return true;
+  } catch (e) { return false; }
+}
+
+function stopSpeech() {
+  if (speechAvailable()) speechSynthesis.cancel();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: TESSERA EDITABILE
+// ════════════════════════════════════════════════════════════════════════════
+function TileEdit({ tile, isSelected, onClick, onDelete, hasWarning }) {
+  const handleDelete = (e) => { e.stopPropagation(); onDelete(); };
+  const handleKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onDelete(); }
+  };
+  return (
+    <div
+      className={`tile-edit fitz-${tile.color} ${tile.isText ? 'text-mode' : ''} ${isSelected ? 'selected' : ''} ${hasWarning ? 'has-warning' : ''}`}
+      onClick={onClick}
+      onKeyDown={handleKey}
+      tabIndex={0}
+      role="button"
+      aria-label={`Tessera CAA: ${tile.word}, categoria ${FITZGERALD.find(f => f.key === tile.color)?.name || tile.color}${hasWarning ? ', con avviso' : ''}`}
+    >
+      <button className="tile-delete-btn" onClick={handleDelete} aria-label="Elimina tessera" tabIndex={-1}>×</button>
+      <div className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`}>
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : tile.emoji}
+      </div>
+      <div className="tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: TESSERA ANTEPRIMA
+// ════════════════════════════════════════════════════════════════════════════
+function PreviewTile({ tile }) {
+  return (
+    <div className={`preview-tile fitz-${tile.color} ${tile.isText ? 'text-mode' : ''}`}>
+      <div className="preview-tile-emoji">
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : tile.emoji}
+      </div>
+      <div className="preview-tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: EMOJI PICKER
+// ════════════════════════════════════════════════════════════════════════════
+function EmojiPicker({ open, onClose, onSelect }) {
+  const [search, setSearch] = useState('');
+  const [customInput, setCustomInput] = useState('');
+
+  if (!open) return null;
+
+  const filtered = search.trim()
+    ? Object.entries(EMOJI_DICT).reduce((acc, [cat, emojis]) => {
+        const filt = emojis.filter(e => e.includes(search));
+        if (filt.length) acc[cat] = filt;
+        return acc;
+      }, {})
+    : EMOJI_DICT;
+
+  const handleSelect = (emoji) => { onSelect(emoji); onClose(); };
+  const handleCustomConfirm = () => {
+    if (customInput.trim()) {
+      onSelect(customInput.trim());
+      setCustomInput('');
+      onClose();
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="emoji-picker-title">
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title" id="emoji-picker-title">Scegli pittogramma o testo</div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap'}}>
+            <input
+              type="text"
+              className="text-input"
+              placeholder="Testo personalizzato (es. XIII secolo, Summa Theologiae)"
+              value={customInput}
+              onChange={e => setCustomInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCustomConfirm()}
+              style={{flex: 1, minWidth: 200}}
+            />
+            <button className="btn btn-primary" onClick={handleCustomConfirm}>Usa questo testo</button>
+          </div>
+          <input
+            type="text"
+            className="emoji-search"
+            placeholder="Cerca tra i pittogrammi disponibili"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            aria-label="Cerca pittogramma"
+          />
+          {Object.entries(filtered).map(([category, emojis]) => (
+            <div key={category}>
+              <div className="emoji-category">{category}</div>
+              <div className="emoji-grid" role="grid">
+                {emojis.map((emoji, i) => (
+                  <button key={i} className="emoji-btn" onClick={() => handleSelect(emoji)} aria-label={`Pittogramma ${emoji}`}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: PANNELLO MODIFICA TESSERA
+// ════════════════════════════════════════════════════════════════════════════
+function TileEditorPanel({ tile, onUpdate, onClose }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const handleEmojiSelect = (emoji) => {
+    const isText = /[a-zA-Zàèìòù\s]/.test(emoji) || emoji.length > 4;
+    onUpdate({ ...tile, emoji, isText });
+  };
+
+  return (
+    <div className="tile-editor-panel">
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Categoria</div>
+        <div className="color-selector">
+          {FITZGERALD.map(f => (
+            <div key={f.key} className="color-chip-wrapper">
+              <button
+                className={`color-chip ${tile.color === f.key ? 'selected' : ''}`}
+                style={{background: f.label}}
+                onClick={() => onUpdate({...tile, color: f.key})}
+                aria-label={`Imposta categoria ${f.name}`}
+                aria-pressed={tile.color === f.key}
+              />
+              <div className="gloss-tooltip" role="tooltip">
+                <strong>{f.glossTitle}</strong>
+                {f.glossDesc}
+                <em>Esempi: {f.examples}</em>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Pittogramma</div>
+        <button className="btn btn-secondary" onClick={() => setPickerOpen(true)}>
+          {tile.isText ? 'Modifica testo' : 'Cambia pittogramma'}
+        </button>
+        <span style={{fontSize: 28, marginLeft: 4}}>
+          {tile.isText
+            ? <span style={{fontSize: 13, color: 'var(--p-sepia)', fontFamily: 'var(--serif)', fontStyle: 'italic'}}>«{tile.emoji.replace(/\n/g,' ')}»</span>
+            : tile.emoji}
+        </span>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Parola CAA</div>
+        <input
+          type="text"
+          className="text-input"
+          value={tile.word}
+          onChange={e => onUpdate({...tile, word: e.target.value})}
+          placeholder="Parola sotto la tessera"
+          aria-label="Parola sulla tessera"
+        />
+      </div>
+      <div className="tile-editor-row" style={{justifyContent: 'space-between'}}>
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={tile.isText}
+            onChange={e => onUpdate({...tile, isText: e.target.checked})}
+          />
+          <span className="toggle-track"></span>
+          Modalità testo (per titoli, secoli, numeri)
+        </label>
+        <button className="btn btn-ghost btn-small" onClick={onClose}>Fine</button>
+      </div>
+      <EmojiPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={handleEmojiSelect} />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: NUCLEO BLOCK
+// ════════════════════════════════════════════════════════════════════════════
+function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, warnings }) {
+  const [selectedTileId, setSelectedTileId] = useState(null);
+
+  const updateNucleusTitle = (title) => onUpdate({...nucleus, title});
+
+  const addTile = () => {
+    const newTile = { id: uid(), color: 'giallo', emoji: '📚', word: 'Nuova', isText: false };
+    onUpdate({...nucleus, tiles: [...nucleus.tiles, newTile]});
+    setSelectedTileId(newTile.id);
+  };
+
+  const updateTile = (updated) => {
+    onUpdate({ ...nucleus, tiles: nucleus.tiles.map(t => t.id === updated.id ? updated : t) });
+  };
+
+  const deleteTile = (tileId) => {
+    onUpdate({ ...nucleus, tiles: nucleus.tiles.filter(t => t.id !== tileId) });
+    if (selectedTileId === tileId) setSelectedTileId(null);
+  };
+
+  const moveNucleusUp = () => onUpdate({...nucleus, _moveDir: 'up'});
+  const moveNucleusDown = () => onUpdate({...nucleus, _moveDir: 'down'});
+
+  const selectedTile = nucleus.tiles.find(t => t.id === selectedTileId);
+  const tileWarningIds = new Set(warnings.filter(w => w.tileId).map(w => w.tileId));
+
+  return (
+    <div className="nucleus-block">
+      <div className="nucleus-header">
+        <input
+          type="text"
+          className="nucleus-title-input"
+          value={nucleus.title}
+          onChange={e => updateNucleusTitle(e.target.value)}
+          placeholder="Titolo del nucleo"
+          aria-label="Titolo del nucleo"
+        />
+        <button className="btn btn-icon btn-ghost" onClick={moveNucleusUp} title="Sposta in alto" aria-label="Sposta nucleo in alto">↑</button>
+        <button className="btn btn-icon btn-ghost" onClick={moveNucleusDown} title="Sposta in basso" aria-label="Sposta nucleo in basso">↓</button>
+        {!isOnly && (
+          <button className="btn btn-icon btn-danger" onClick={onDelete} title="Elimina nucleo" aria-label="Elimina nucleo">×</button>
+        )}
+      </div>
+      <div className="tiles-container">
+        {nucleus.tiles.map(tile => (
+          <TileEdit
+            key={tile.id}
+            tile={tile}
+            isSelected={tile.id === selectedTileId}
+            onClick={() => setSelectedTileId(tile.id === selectedTileId ? null : tile.id)}
+            onDelete={() => deleteTile(tile.id)}
+            hasWarning={tileWarningIds.has(tile.id)}
+          />
+        ))}
+        <button className="add-tile-btn" onClick={addTile} aria-label="Aggiungi simbolo CAA">+</button>
+      </div>
+      {selectedTile && (
+        <TileEditorPanel
+          tile={selectedTile}
+          onUpdate={updateTile}
+          onClose={() => setSelectedTileId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: VALIDATOR PANEL
+// ════════════════════════════════════════════════════════════════════════════
+function ValidatorPanel({ warnings }) {
+  if (warnings.length === 0) {
+    return (
+      <div className="validator-panel validator-empty">
+        <div className="validator-title">
+          <span className="warning-icon success">✓</span>
+          Nessun avviso didattico
+        </div>
+        <div style={{fontSize: 12, color: 'var(--p-ink-light)', marginTop: 4}}>
+          La tavola non presenta segnalazioni automatiche. Resta da verificare il senso complessivo.
+        </div>
+      </div>
+    );
+  }
+  const errors = warnings.filter(w => w.level === 'error');
+  const warns = warnings.filter(w => w.level === 'warning');
+
+  return (
+    <div className="validator-panel">
+      <div className="validator-title">
+        <span className="warning-icon">⚠</span>
+        Avvisi didattici ({warnings.length})
+      </div>
+      <div style={{fontSize: 11, color: 'var(--p-muted)', fontStyle: 'italic', marginBottom: 10, fontFamily: 'var(--serif)'}}>
+        Suggerimenti automatici basati sul metodo CAA. Sono indicazioni, non vincoli.
+      </div>
+      <ul className="warning-list">
+        {[...errors, ...warns].map((w, i) => (
+          <li key={i} className="warning-item">
+            <span className={`warning-icon ${w.level === 'error' ? 'error' : ''}`}>
+              {w.level === 'error' ? '✗' : '⚠'}
+            </span>
+            <div className="warning-text">
+              <strong>{w.text}</strong>
+              {w.suggestion && <> <em>{w.suggestion}</em></>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: SPEECH READER
+// ════════════════════════════════════════════════════════════════════════════
+function SpeechReader({ project }) {
+  const [speaking, setSpeaking] = useState(false);
+  const [supported] = useState(speechAvailable());
+
+  if (!supported) {
+    return (
+      <div className="speech-controls">
+        <span className="speech-label">La sintesi vocale non è disponibile in questo browser.</span>
+      </div>
+    );
+  }
+
+  const buildText = () => {
+    const parts = [];
+    project.nuclei.forEach((n, i) => {
+      const phrase = n.tiles.map(t => t.word).filter(Boolean).join(', ');
+      if (phrase) parts.push(`Nucleo ${i+1}. ${phrase}.`);
+    });
+    return parts.join(' ');
+  };
+
+  const handleSpeak = () => {
+    if (speaking) {
+      stopSpeech();
+      setSpeaking(false);
+      return;
+    }
+    const text = buildText();
+    if (!text) return;
+    if (speakText(text)) {
+      setSpeaking(true);
+      // Reset state when finished
+      const checkEnd = setInterval(() => {
+        if (!speechSynthesis.speaking) {
+          setSpeaking(false);
+          clearInterval(checkEnd);
+        }
+      }, 300);
+    }
+  };
+
+  return (
+    <div className="speech-controls">
+      <span className="speech-label">
+        Passo 7 — verifica orale: ascolta la rilettura della tavola simbolo per simbolo.
+      </span>
+      <button className="btn btn-secondary" onClick={handleSpeak} aria-pressed={speaking}>
+        {speaking ? '◼ Interrompi lettura' : '▶ Leggi ad alta voce'}
+      </button>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: CHECKLIST PRE-CONSEGNA (Sezione 7 della Guida Operativa)
+// ════════════════════════════════════════════════════════════════════════════
+const CHECKLIST_DATA = [
+  {
+    section: 'Fase di analisi',
+    items: [
+      'Ho compreso completamente il significato del testo originale',
+      'Ho individuato tutti i nuclei di significato',
+      'Ho chiarito termini arcaici, tecnici o ambigui'
+    ]
+  },
+  {
+    section: 'Fase di semplificazione',
+    items: [
+      'Tutte le frasi sono in forma attiva',
+      'Ogni frase ha struttura Soggetto–Verbo–Complemento',
+      'I soggetti sottintesi sono stati esplicitati',
+      'I pronomi ambigui sono stati sostituiti con i nomi',
+      'I tempi verbali sono presente o passato prossimo',
+      'Il lessico è concreto e quotidiano'
+    ]
+  },
+  {
+    section: 'Fase di composizione',
+    items: [
+      'Ogni parola ha un pittogramma assegnato',
+      'I colori Fitzgerald sono coerenti in tutta la tavola',
+      'L\'ordine di lettura è chiaro (sinistra → destra, alto → basso)',
+      'La parola scritta compare sotto ogni simbolo',
+      'Ho riletto la tavola ad alta voce e il messaggio è comprensibile'
+    ]
+  }
+];
+
+function PreSubmitChecklist({ checks, onChange }) {
+  const toggle = (key) => {
+    const next = new Set(checks);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    onChange([...next]);
+  };
+  const total = CHECKLIST_DATA.reduce((acc, s) => acc + s.items.length, 0);
+  const done = checks.length;
+  return (
+    <div>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 12}}>
+        <div style={{fontSize: 12, color: 'var(--p-muted)', fontStyle: 'italic', fontFamily: 'var(--serif)'}}>
+          {done} di {total} voci spuntate
+        </div>
+        <button className="btn btn-ghost btn-small" onClick={() => onChange([])}>Reimposta</button>
+      </div>
+      {CHECKLIST_DATA.map(section => (
+        <div key={section.section} className="checklist-section">
+          <div className="checklist-section-title">{section.section}</div>
+          {section.items.map((item, i) => {
+            const key = `${section.section}::${item}`;
+            const checked = checks.includes(key);
+            return (
+              <label key={i} className={`checklist-item ${checked ? 'checked' : ''}`}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(key)} />
+                <span className="checklist-item-label">{item}</span>
+              </label>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTI MODALITÀ GUIDATA — STEPS 1-4
+// ════════════════════════════════════════════════════════════════════════════
+const STEPS = [
+  { num: 1, title: 'Comprensione', subtitle: 'leggere e capire il testo originale' },
+  { num: 2, title: 'Nuclei',       subtitle: 'individuare le unità minime di senso' },
+  { num: 3, title: 'Sintassi',     subtitle: 'semplificare in struttura SVO' },
+  { num: 4, title: 'Lessico',      subtitle: 'sostituire le parole non quotidiane' },
+  { num: 5, title: 'Codifica',     subtitle: 'assegnare i colori Fitzgerald' },
+  { num: 6, title: 'Pittogrammi',  subtitle: 'scegliere gli emoji-simboli' },
+  { num: 7, title: 'Verifica',     subtitle: 'rileggere e validare la tavola' },
+];
+
+function Stepper({ currentStep, completedSteps, onJump }) {
+  return (
+    <div className="stepper" role="navigation" aria-label="Percorso dei sette passi">
+      {STEPS.map(s => (
+        <button
+          key={s.num}
+          className={`step-pill ${currentStep === s.num ? 'active' : ''} ${completedSteps.includes(s.num) ? 'completed' : ''}`}
+          onClick={() => onJump(s.num)}
+          aria-current={currentStep === s.num ? 'step' : undefined}
+        >
+          <span className="step-num">{s.num}</span>
+          <span>{s.title}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Step1Comprehension({ project, onUpdate }) {
+  const updateText = (originalText) => onUpdate({...project, originalText});
+  const updateAnalysis = (key, val) => onUpdate({
+    ...project,
+    step1Analysis: {...project.step1Analysis, [key]: val}
+  });
+
+  // Analisi automatica del testo: cerca pattern sospetti
+  const autoFindings = useMemo(() => {
+    const text = project.originalText || '';
+    const f = [];
+    if (/\bè\s+stat\w+\b|\bsono\s+stat\w+\b|\bvenne\s+\w+(?:to|so|ato|uto|ito)\b/i.test(text)) {
+      f.push('Forma passiva rilevata (es. "è stato scritto", "venne narrato")');
+    }
+    if (/\b\w+(?:arono|erono|irono|asti|esti|isti|ammo|emmo|immo|ò|é|ì)\b/i.test(text) && /\b(scrisse|nacque|morì|disse|fece|andò|venne|prese|vide|lesse|pose|compose)\b/i.test(text)) {
+      f.push('Verbi al passato remoto (es. "scrisse", "nacque", "morì")');
+    }
+    if (/\bavendo\b|\bessendo\b|\bavuto\b|gerundio/i.test(text)) {
+      f.push('Subordinata implicita (gerundio, participio)');
+    }
+    if (/\bgli\b|\blo\b|\bla\b/i.test(text) && text.split(/[,.;]/).filter(s => /\bgli\b|\blo\b|\bla\b/i.test(s)).length > 1) {
+      f.push('Possibili pronomi ambigui (verifica i referenti)');
+    }
+    return f;
+  }, [project.originalText]);
+
+  const checks = [
+    { key: 'passive', label: 'Ci sono forme passive da girare in attive?' },
+    { key: 'subordinate', label: 'Ci sono subordinate implicite (gerundio, participio)?' },
+    { key: 'hiddenSubject', label: 'Ci sono soggetti sottintesi da esplicitare?' },
+    { key: 'ambiguousPronoun', label: 'Ci sono pronomi con referente ambiguo?' },
+    { key: 'forbiddenTense', label: 'Ci sono tempi verbali non ammessi (passato remoto, congiuntivo, condizionale)?' },
+    { key: 'abstractWord', label: 'Ci sono parole astratte, arcaiche o troppo letterarie?' },
+  ];
+
+  return (
+    <div className="step-content">
+      <div className="step-title">Passo 1 — Comprensione</div>
+      <div className="step-subtitle">Leggere e capire il testo originale</div>
+      <div className="step-instruction">
+        Incolla il testo da tradurre. Poi rifletti sulle sue caratteristiche: sono presenti
+        passivi, subordinate implicite, soggetti sottintesi, pronomi ambigui, tempi non
+        ammessi in CAA o lessico astratto? L'analisi qui ti guida nelle scelte successive.
+      </div>
+
+      <div className="tile-editor-label" style={{marginBottom: 8}}>Testo originale</div>
+      <textarea
+        className="textarea"
+        value={project.originalText}
+        onChange={e => updateText(e.target.value)}
+        placeholder="Esempio: «Boccaccio scrisse il Decameron durante la peste del 1348 mentre era rifugiato fuori Firenze.»"
+        aria-label="Testo originale da tradurre"
+      />
+
+      {autoFindings.length > 0 && (
+        <div className="validator-panel" style={{marginTop: 16, marginBottom: 14, borderLeftColor: 'var(--p-sepia)'}}>
+          <div className="validator-title" style={{fontSize: 13}}>
+            <span className="warning-icon" style={{color: 'var(--p-sepia)'}}>◆</span>
+            L'analizzatore segnala
+          </div>
+          <ul className="warning-list">
+            {autoFindings.map((f, i) => (
+              <li key={i} className="warning-item">
+                <span className="warning-icon" style={{color: 'var(--p-sepia)'}}>›</span>
+                <span className="warning-text">{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="tile-editor-label" style={{marginTop: 16, marginBottom: 8}}>La tua analisi</div>
+      <div className="checkbox-grid">
+        {checks.map(c => (
+          <label key={c.key} className={`check-item ${project.step1Analysis[c.key] ? 'checked' : ''}`}>
+            <input
+              type="checkbox"
+              checked={project.step1Analysis[c.key]}
+              onChange={e => updateAnalysis(c.key, e.target.checked)}
+            />
+            <span className="check-item-text">{c.label}</span>
+          </label>
+        ))}
+      </div>
+
+      <div className="tile-editor-label" style={{marginTop: 14, marginBottom: 6}}>Note di comprensione (facoltative)</div>
+      <textarea
+        className="textarea"
+        value={project.step1Analysis.notes}
+        onChange={e => updateAnalysis('notes', e.target.value)}
+        placeholder="Annota qui eventuali termini da chiarire o difficoltà incontrate."
+        style={{minHeight: 60}}
+      />
+    </div>
+  );
+}
+
+function Step2Nuclei({ project, onUpdate }) {
+  const setNuclei = (step2Nuclei) => onUpdate({...project, step2Nuclei});
+  const addNucleus = () => setNuclei([...project.step2Nuclei, {id: uid(), raw: ''}]);
+  const updateNuc = (id, raw) => setNuclei(project.step2Nuclei.map(n => n.id === id ? {...n, raw} : n));
+  const removeNuc = (id) => setNuclei(project.step2Nuclei.filter(n => n.id !== id));
+
+  // Inizializzazione automatica suggerita da split per punti
+  const suggestSplit = () => {
+    const sentences = (project.originalText || '').split(/[.;]\s*/).filter(s => s.trim().length > 4);
+    setNuclei(sentences.map(s => ({id: uid(), raw: s.trim()})));
+  };
+
+  return (
+    <div className="step-content">
+      <div className="step-title">Passo 2 — Nuclei di significato</div>
+      <div className="step-subtitle">Individuare le unità minime di senso</div>
+      <div className="step-instruction">
+        Dividi il testo in nuclei: ogni nucleo è una <em>unità minima di senso autonomo</em>
+        e diventerà una riga di tessere nella tavola finale. Frase complessa → più nuclei.
+      </div>
+
+      {project.originalText && (
+        <div className="original-text-box">
+          {project.originalText}
+        </div>
+      )}
+
+      {project.step2Nuclei.length === 0 && (
+        <div style={{textAlign: 'center', margin: '16px 0'}}>
+          <button className="btn btn-secondary" onClick={suggestSplit} disabled={!project.originalText}>
+            Suggerisci una divisione automatica
+          </button>
+          <div style={{fontSize: 12, color: 'var(--p-muted)', marginTop: 8, fontStyle: 'italic', fontFamily: 'var(--serif)'}}>
+            …oppure aggiungi i nuclei manualmente.
+          </div>
+        </div>
+      )}
+
+      {project.step2Nuclei.map((n, i) => (
+        <div key={n.id} className="nucleus-edit-row">
+          <div className="nucleus-num">{i+1}.</div>
+          <input
+            type="text"
+            className="text-input"
+            value={n.raw}
+            onChange={e => updateNuc(n.id, e.target.value)}
+            placeholder={`Nucleo ${i+1} estratto dal testo originale`}
+            aria-label={`Nucleo ${i+1}`}
+          />
+          <button className="btn btn-icon btn-ghost" onClick={() => removeNuc(n.id)} aria-label={`Elimina nucleo ${i+1}`}>×</button>
+        </div>
+      ))}
+
+      <button className="btn btn-secondary" onClick={addNucleus} style={{marginTop: 8}}>
+        + Aggiungi nucleo
+      </button>
+    </div>
+  );
+}
+
+function Step3Simplification({ project, onUpdate }) {
+  const setSimp = (step3Simplified) => onUpdate({...project, step3Simplified});
+  const updateSimp = (idx, val) => setSimp({...project.step3Simplified, [idx]: val});
+
+  return (
+    <div className="step-content">
+      <div className="step-title">Passo 3 — Semplificazione sintattica</div>
+      <div className="step-subtitle">Riscrivere in struttura Soggetto–Verbo–Complemento</div>
+      <div className="step-instruction">
+        Per ciascun nucleo, scrivi qui la versione semplificata: forma <strong>attiva</strong>,
+        soggetto esplicito, tempi <strong>presente</strong> o <strong>passato prossimo</strong>,
+        nessuna subordinata. L'analizzatore segnala in tempo reale forme che non rispettano
+        i vincoli CAA.
+      </div>
+
+      {project.step2Nuclei.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-state-icon">∅</div>
+          <div className="empty-state-text">Nessun nucleo definito</div>
+          <div className="empty-state-hint">Torna al Passo 2 per dividere il testo in nuclei.</div>
+        </div>
+      )}
+
+      {project.step2Nuclei.map((n, i) => {
+        const simplified = project.step3Simplified[i] || '';
+        const localWarnings = [];
+        for (const pat of FORBIDDEN_PATTERNS) {
+          if (pat.regex.test(simplified)) {
+            localWarnings.push(pat.label);
+          }
+        }
+        FORBIDDEN_VERB_FORMS.forEach(v => {
+          const re = new RegExp(`\\b${v}\\b`, 'i');
+          if (re.test(simplified)) localWarnings.push(`forma "${v}" non ammessa in CAA`);
+        });
+        return (
+          <div key={n.id} style={{marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--p-line)'}}>
+            <div style={{display: 'flex', gap: 10, alignItems: 'baseline', marginBottom: 6}}>
+              <div className="nucleus-num">{i+1}.</div>
+              <div style={{fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--p-sepia)', fontSize: 14}}>{n.raw}</div>
+            </div>
+            <textarea
+              className="textarea"
+              value={simplified}
+              onChange={e => updateSimp(i, e.target.value)}
+              placeholder="Riscrivi in SVO con tempi ammessi…"
+              style={{minHeight: 70}}
+              aria-label={`Versione semplificata del nucleo ${i+1}`}
+            />
+            {localWarnings.length > 0 && (
+              <div style={{marginTop: 6, fontSize: 12, color: 'var(--p-warning)', fontStyle: 'italic', fontFamily: 'var(--serif)'}}>
+                ⚠ {[...new Set(localWarnings)].join(' · ')}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Step4Lexicon({ project, onUpdate }) {
+  const setLex = (step4Lexicon) => onUpdate({...project, step4Lexicon});
+  const addRow = () => setLex([...project.step4Lexicon, {original: '', caa: ''}]);
+  const updateRow = (i, field, val) => setLex(project.step4Lexicon.map((r, idx) => idx === i ? {...r, [field]: val} : r));
+  const removeRow = (i) => setLex(project.step4Lexicon.filter((_, idx) => idx !== i));
+
+  // Suggerimenti tipici
+  const suggestions = [
+    ['redigere', 'scrivere'],
+    ['narrare', 'raccontare'],
+    ['dimorare', 'abitare'],
+    ['perire', 'morire'],
+    ['giungere', 'arrivare'],
+    ['udire', 'sentire'],
+    ['XIII secolo', 'tanto tempo fa (anno 1200)'],
+    ['Trecento', 'anno 1300'],
+    ['si intitola', 'si chiama'],
+    ['considerato il padre', 'è importante per'],
+  ];
+
+  return (
+    <div className="step-content">
+      <div className="step-title">Passo 4 — Lessico concreto</div>
+      <div className="step-subtitle">Sostituire le parole non quotidiane</div>
+      <div className="step-instruction">
+        Annota ogni parola del testo che <em>sostituisci</em> con un equivalente più comune
+        e visivamente rappresentabile. Questa tabella ti aiuterà nella codifica e
+        documenterà le tue scelte didattiche.
+      </div>
+
+      <table className="lex-table">
+        <thead>
+          <tr>
+            <th style={{width: '45%'}}>Parola originale</th>
+            <th style={{width: '45%'}}>Parola CAA</th>
+            <th style={{width: '10%'}}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {project.step4Lexicon.map((r, i) => (
+            <tr key={i}>
+              <td><input type="text" value={r.original} onChange={e => updateRow(i, 'original', e.target.value)} aria-label={`Parola originale riga ${i+1}`}/></td>
+              <td><input type="text" value={r.caa} onChange={e => updateRow(i, 'caa', e.target.value)} aria-label={`Sostituzione CAA riga ${i+1}`}/></td>
+              <td><button className="btn btn-icon btn-ghost" onClick={() => removeRow(i)} aria-label="Elimina riga">×</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button className="btn btn-secondary btn-small" onClick={addRow}>+ Aggiungi sostituzione</button>
+
+      <hr className="panel-divider"/>
+
+      <div style={{fontSize: 12, color: 'var(--p-muted)', fontStyle: 'italic', marginBottom: 8, fontFamily: 'var(--serif)'}}>
+        Sostituzioni tipiche da considerare:
+      </div>
+      <div style={{display: 'flex', flexWrap: 'wrap', gap: 6}}>
+        {suggestions.map(([orig, caa], i) => (
+          <button
+            key={i}
+            className="btn btn-ghost btn-small"
+            onClick={() => setLex([...project.step4Lexicon, {original: orig, caa}])}
+            style={{fontFamily: 'var(--serif)', fontStyle: 'italic'}}
+          >
+            {orig} → {caa}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: ANTEPRIMA (vista stampa con cartiglio Poetrify)
+// ════════════════════════════════════════════════════════════════════════════
+function PreviewView({ project }) {
+  if (!project) return null;
+  return (
+    <div id="preview-content" className="preview-container">
+      <div className="preview-doc-title">{project.title}</div>
+      <div className="preview-doc-subtitle">Tavola in Comunicazione Aumentativa Alternativa</div>
+
+      <div className="preview-legenda">
+        {FITZGERALD.map(f => (
+          <div key={f.key} className="preview-legenda-item">
+            <div className="preview-legenda-dot" style={{background: f.label}}></div>
+            {f.short}
+          </div>
+        ))}
+      </div>
+
+      {project.nuclei.map(nucleus => (
+        <div key={nucleus.id} className="preview-nucleus">
+          <div className="preview-nucleus-title">{nucleus.title}</div>
+          <div className="preview-tiles-row">
+            {nucleus.tiles.map(tile => <PreviewTile key={tile.id} tile={tile} />)}
+            {nucleus.tiles.length === 0 && (
+              <div style={{color: 'var(--p-muted)', fontSize: 12, fontStyle: 'italic', fontFamily: 'var(--serif)'}}>nucleo vuoto</div>
+            )}
+          </div>
+        </div>
+      ))}
+
+      <div className="preview-footer">
+        Atelier CAA · {new Date(project.updatedAt).toLocaleDateString('it-IT')}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: TOAST
+// ════════════════════════════════════════════════════════════════════════════
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, [message, onDone]);
+  return message ? <div className="toast" role="status" aria-live="polite">{message}</div> : null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: SIDEBAR ORIGINALE
+// ════════════════════════════════════════════════════════════════════════════
+function OriginalSidebar({ project }) {
+  if (!project.originalText || !project.originalText.trim()) return null;
+
+  // Calcola coverage delle parole
+  const allWords = useMemo(() => {
+    const set = new Set();
+    project.nuclei.forEach(n => n.tiles.forEach(t => {
+      const w = (t.word || '').toLowerCase().trim();
+      if (w) set.add(w);
+    }));
+    return set;
+  }, [project.nuclei]);
+
+  // Highlight delle parole "coperte" nel testo originale
+  const segments = useMemo(() => {
+    const text = project.originalText;
+    const tokens = text.split(/(\s+|[.,;:!?])/);
+    return tokens.map((tok, i) => {
+      const clean = tok.toLowerCase().replace(/[.,;:!?]/g,'').trim();
+      if (!clean) return { text: tok, covered: false };
+      // Cerca match parziale nelle parole CAA
+      let covered = false;
+      for (const w of allWords) {
+        if (w.includes(clean) || clean.includes(w)) {
+          if (clean.length >= 3 || w.length >= 3) { covered = true; break; }
+        }
+      }
+      return { text: tok, covered };
+    });
+  }, [project.originalText, allWords]);
+
+  const coveredCount = segments.filter(s => s.covered).length;
+  const totalWords = segments.filter(s => s.text.trim() && !/^[.,;:!?]$/.test(s.text)).length;
+
+  return (
+    <div className="original-sidebar">
+      <div className="sidebar-title">Testo originale</div>
+      <div className="sidebar-text">
+        {segments.map((seg, i) =>
+          seg.covered
+            ? <mark key={i} className="covered">{seg.text}</mark>
+            : <span key={i}>{seg.text}</span>
+        )}
+      </div>
+      <div className="sidebar-stats">
+        {coveredCount} di {totalWords} parole tradotte (approssimativo)
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: APP PRINCIPALE
+// ════════════════════════════════════════════════════════════════════════════
+function App() {
+  const [projects, setProjects] = useState([]);
+  const [currentId, setCurrentId] = useState(null);
+  const [view, setView] = useState('editor');
+  const [toast, setToast] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [showModeChoice, setShowModeChoice] = useState(false);
+  const [checks, setChecks] = useState([]);
+  const fileInputRef = useRef(null);
+  const initialized = useRef(false);
+
+  // Caricamento iniziale
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    const data = loadFromStorage();
+    if (data?.projects?.length > 0) {
+      setProjects(data.projects);
+      setCurrentId(data.currentId || data.projects[0].id);
+    } else {
+      const example = exampleProject();
+      setProjects([example]);
+      setCurrentId(example.id);
+    }
+  }, []);
+
+  // Salvataggio automatico
+  useEffect(() => {
+    if (!initialized.current || projects.length === 0) return;
+    saveToStorage({ projects, currentId });
+  }, [projects, currentId]);
+
+  const currentProject = projects.find(p => p.id === currentId);
+  const warnings = useMemo(() => validateProject(currentProject), [currentProject]);
+
+  // ── Operazioni progetto ────────────────────────
+  const updateProject = (updated) => {
+    setProjects(prev => prev.map(p => p.id === updated.id ? {...updated, updatedAt: new Date().toISOString()} : p));
+  };
+
+  const updateTitle = (title) => currentProject && updateProject({...currentProject, title});
+
+  const startNewProject = () => setShowModeChoice(true);
+
+  const createProject = (mode) => {
+    const p = emptyProject('Nuova traduzione CAA', mode);
+    setProjects(prev => [p, ...prev]);
+    setCurrentId(p.id);
+    setView('editor');
+    setShowModeChoice(false);
+    setToast(mode === 'guidata' ? 'Modalità guidata avviata: parti dal Passo 1.' : 'Nuovo progetto in modalità libera.');
+  };
+
+  const duplicateProject = (id) => {
+    const orig = projects.find(p => p.id === id);
+    if (!orig) return;
+    const copy = JSON.parse(JSON.stringify(orig));
+    copy.id = uid();
+    copy.title = orig.title + ' (copia)';
+    copy.createdAt = new Date().toISOString();
+    copy.updatedAt = new Date().toISOString();
+    copy.nuclei = copy.nuclei.map(n => ({
+      ...n, id: uid(),
+      tiles: n.tiles.map(t => ({...t, id: uid()}))
+    }));
+    setProjects(prev => [copy, ...prev]);
+    setCurrentId(copy.id);
+    setToast('Traduzione duplicata.');
+  };
+
+  const deleteProject = (id) => {
+    if (!confirm('Vuoi eliminare definitivamente questa traduzione? L\'azione non è reversibile.')) return;
+    const remaining = projects.filter(p => p.id !== id);
+    setProjects(remaining);
+    if (currentId === id) setCurrentId(remaining[0]?.id || null);
+    setToast('Traduzione eliminata.');
+  };
+
+  // ── Operazioni nuclei ──────────────────────────
+  const updateNucleus = (updated) => {
+    if (!currentProject) return;
+    if (updated._moveDir) {
+      const nuclei = [...currentProject.nuclei];
+      const idx = nuclei.findIndex(n => n.id === updated.id);
+      if (idx === -1) return;
+      const newIdx = updated._moveDir === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= nuclei.length) return;
+      [nuclei[idx], nuclei[newIdx]] = [nuclei[newIdx], nuclei[idx]];
+      updateProject({...currentProject, nuclei});
+      return;
+    }
+    updateProject({
+      ...currentProject,
+      nuclei: currentProject.nuclei.map(n => n.id === updated.id ? updated : n)
+    });
+  };
+
+  const addNucleus = () => {
+    if (!currentProject) return;
+    const newNuc = { id: uid(), title: `Nucleo ${currentProject.nuclei.length + 1}`, tiles: [] };
+    updateProject({ ...currentProject, nuclei: [...currentProject.nuclei, newNuc] });
+  };
+
+  const deleteNucleus = (id) => {
+    if (!currentProject) return;
+    if (currentProject.nuclei.length <= 1) {
+      setToast('Devi mantenere almeno un nucleo.');
+      return;
+    }
+    updateProject({ ...currentProject, nuclei: currentProject.nuclei.filter(n => n.id !== id) });
+  };
+
+  // ── Stepper guidato ────────────────────────────
+  const setStep = (step) => {
+    if (!currentProject) return;
+    const completed = currentProject.completedSteps || [];
+    const newCompleted = currentProject.currentStep && !completed.includes(currentProject.currentStep)
+      ? [...completed, currentProject.currentStep]
+      : completed;
+    updateProject({...currentProject, currentStep: step, completedSteps: newCompleted});
+  };
+
+  // ── Esportazione ───────────────────────────────
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify({ projects, schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `atelier-caa-archivio-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('Archivio esportato.');
+  };
+
+  const exportCurrentJSON = () => {
+    if (!currentProject) return;
+    const blob = new Blob([JSON.stringify({ projects: [currentProject], schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('Traduzione esportata.');
+  };
+
+  const importJSON = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.projects || !Array.isArray(data.projects)) throw new Error('Formato non valido');
+        const imported = data.projects.map(p => ({
+          ...p,
+          id: uid(),
+          mode: p.mode || 'libera',
+          completedSteps: p.completedSteps || [],
+          currentStep: p.currentStep || 1,
+          step1Analysis: p.step1Analysis || { passive: false, subordinate: false, hiddenSubject: false, ambiguousPronoun: false, forbiddenTense: false, abstractWord: false, notes: '' },
+          step2Nuclei: p.step2Nuclei || [],
+          step3Simplified: p.step3Simplified || {},
+          step4Lexicon: p.step4Lexicon || [],
+          originalText: p.originalText || '',
+          nuclei: (p.nuclei || []).map(n => ({
+            ...n, id: uid(),
+            tiles: (n.tiles || []).map(t => ({...t, id: uid()}))
+          }))
+        }));
+        setProjects(prev => [...imported, ...prev]);
+        if (imported[0]) setCurrentId(imported[0].id);
+        setToast(`${imported.length} traduzione/i caricata/e.`);
+      } catch (err) {
+        setToast('File non riconosciuto.');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const handlePrint = () => {
+    setView('preview');
+    setTimeout(() => window.print(), 300);
+  };
+
+  const handlePdfExport = async () => {
+    if (!currentProject) return;
+    setView('preview');
+    setExporting(true);
+    setToast('Generazione PDF in corso…');
+    await new Promise(r => setTimeout(r, 500));
+
+    try {
+      const element = document.getElementById('preview-content');
+      if (!element) throw new Error('Anteprima non disponibile');
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#FFFFFF',
+        useCORS: true,
+        logging: false,
+        windowWidth: Math.max(element.scrollWidth, 800)
+      });
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const drawW = pdfWidth - 20;
+      const ratio = canvas.width / drawW;
+      const drawH = canvas.height / ratio;
+
+      if (drawH <= pdfHeight - 20) {
+        const y = (pdfHeight - drawH) / 2;
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, y, drawW, drawH);
+      } else {
+        const pageHeightPx = (pdfHeight - 20) * ratio;
+        let yOffset = 0, pageNum = 0;
+        while (yOffset < canvas.height) {
+          if (pageNum > 0) pdf.addPage();
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = Math.min(pageHeightPx, canvas.height - yOffset);
+          const ctx = pageCanvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(canvas, 0, -yOffset);
+          pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 10, 10, drawW, (pageCanvas.height / canvas.width) * drawW);
+          yOffset += pageHeightPx;
+          pageNum++;
+        }
+      }
+
+      pdf.save(`${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+      setToast('PDF scaricato.');
+    } catch (err) {
+      console.error(err);
+      setToast('Errore PDF — usa "Stampa" come alternativa.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePngExport = async () => {
+    if (!currentProject) return;
+    setView('preview');
+    setExporting(true);
+    setToast('Generazione immagine in corso…');
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const element = document.getElementById('preview-content');
+      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#FFFFFF', useCORS: true, logging: false });
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setToast('Immagine scaricata.');
+      });
+    } catch (err) {
+      setToast('Errore esportazione.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ════════ RENDER MODALE SCELTA ════════
+  const ModeChoiceModal = () => (
+    <div className="modal-overlay" onClick={() => setShowModeChoice(false)} role="dialog" aria-modal="true">
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: 560}}>
+        <div className="modal-header">
+          <div className="modal-title">Come vuoi cominciare?</div>
+          <button className="btn btn-icon btn-secondary" onClick={() => setShowModeChoice(false)} aria-label="Chiudi">×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--p-ink-light)', marginBottom: 6}}>
+            Scegli l'approccio adatto alla tua esperienza con il metodo CAA.
+          </div>
+          <div className="mode-choice">
+            <button className="mode-card" onClick={() => createProject('libera')}>
+              <div className="mode-card-icon">∰</div>
+              <div className="mode-card-title">Modalità libera</div>
+              <div className="mode-card-desc">
+                Costruzione diretta della tavola, partendo dalle tessere. Per chi
+                conosce già il metodo o vuole adattare un testo già semplificato.
+              </div>
+            </button>
+            <button className="mode-card" onClick={() => createProject('guidata')}>
+              <div className="mode-card-icon">∮</div>
+              <div className="mode-card-title">Modalità guidata</div>
+              <div className="mode-card-desc">
+                Percorso a sette passi: dalla comprensione del testo originale alla
+                tavola finale. Pensato per l'apprendimento del metodo in classe.
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ════════ RENDER STEP CORRENTE (modalità guidata) ════════
+  const renderGuidedStep = () => {
+    if (!currentProject) return null;
+    const step = currentProject.currentStep || 1;
+    if (step === 1) return <Step1Comprehension project={currentProject} onUpdate={updateProject} />;
+    if (step === 2) return <Step2Nuclei project={currentProject} onUpdate={updateProject} />;
+    if (step === 3) return <Step3Simplification project={currentProject} onUpdate={updateProject} />;
+    if (step === 4) return <Step4Lexicon project={currentProject} onUpdate={updateProject} />;
+    // Steps 5-7 → l'editor di tessere standard, con messaggio guida
+    return null;
+  };
+
+  const showEditorTiles = !currentProject?.mode || currentProject.mode === 'libera' || (currentProject.currentStep || 1) >= 5;
+
+  // ════════ RENDER MAIN ════════
+  return (
+    <div>
+      <header className="app-header">
+        <div className="brand">
+          <div className="brand-mark">A</div>
+          <div className="brand-text">
+            <div className="brand-title">Atelier CAA</div>
+            <div className="brand-subtitle">Comunicazione Aumentativa Alternativa</div>
+          </div>
+        </div>
+        <div className="header-actions">
+          <button className="btn btn-ghost btn-small" onClick={() => fileInputRef.current?.click()} title="Carica un archivio JSON">
+            ↑ Carica
+          </button>
+          <input ref={fileInputRef} type="file" accept="application/json" onChange={importJSON} style={{display: 'none'}} />
+          <button className="btn btn-ghost btn-small" onClick={exportJSON} title="Esporta tutti i progetti come archivio JSON">
+            ↓ Archivio
+          </button>
+        </div>
+      </header>
+
+      <nav className="tab-nav" role="tablist">
+        <button
+          role="tab"
+          aria-selected={view === 'projects'}
+          className={`tab-btn ${view === 'projects' ? 'active' : ''}`}
+          onClick={() => setView('projects')}
+        >
+          Le tue traduzioni ({projects.length})
+        </button>
+        <button
+          role="tab"
+          aria-selected={view === 'editor'}
+          className={`tab-btn ${view === 'editor' ? 'active' : ''}`}
+          onClick={() => setView('editor')}
+          disabled={!currentProject}
+        >
+          Lavoro in corso
+        </button>
+        <button
+          role="tab"
+          aria-selected={view === 'preview'}
+          className={`tab-btn ${view === 'preview' ? 'active' : ''}`}
+          onClick={() => setView('preview')}
+          disabled={!currentProject}
+        >
+          Anteprima e stampa
+        </button>
+      </nav>
+
+      <main className="app-main" id="main-content">
+        {/* ═══ VISTA PROGETTI ═══ */}
+        {view === 'projects' && (
+          <div className="panel editor-only">
+            <div className="panel-title">
+              <span>Le tue traduzioni</span>
+              <button className="btn btn-primary" onClick={startNewProject}>+ Nuova traduzione</button>
+            </div>
+            <div className="panel-subtitle">
+              Le traduzioni vengono salvate nel browser. Per portarle altrove, usa Archivio.
+            </div>
+            {projects.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">∅</div>
+                <div className="empty-state-text">Nessuna traduzione ancora</div>
+                <div className="empty-state-hint">Inizia la tua prima traduzione CAA.</div>
+                <button className="btn btn-primary btn-large" onClick={startNewProject}>+ Inizia ora</button>
+              </div>
+            ) : (
+              <div className="project-list">
+                {projects.map(p => (
+                  <div key={p.id} className={`project-card ${p.id === currentId ? 'active' : ''}`} onClick={() => { setCurrentId(p.id); setView('editor'); }} tabIndex={0} role="button"
+                    onKeyDown={(e) => {if (e.key === 'Enter') {setCurrentId(p.id); setView('editor');}}}>
+                    {p.mode === 'guidata' && <div className="project-card-mode guided">Modalità guidata · passo {p.currentStep || 1}/7</div>}
+                    {(!p.mode || p.mode === 'libera') && <div className="project-card-mode">Modalità libera</div>}
+                    <div className="project-card-title">{p.title}</div>
+                    <div className="project-card-meta">
+                      <span>{p.nuclei.length} nucle{p.nuclei.length === 1 ? 'o' : 'i'}</span>
+                      <span>{fmtDate(p.updatedAt)}</span>
+                    </div>
+                    <div className="project-card-actions" onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-ghost btn-small" onClick={() => duplicateProject(p.id)} title="Duplica">⎘</button>
+                      <button className="btn btn-ghost btn-small" onClick={() => { setCurrentId(p.id); exportCurrentJSON(); }} title="Esporta">↓</button>
+                      <button className="btn btn-danger btn-small" onClick={() => deleteProject(p.id)} title="Elimina">×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="help-tip" style={{marginTop: 18}}>
+              <strong>Privacy.</strong> Tutto resta nel tuo browser, in locale. Nessun dato viene inviato a server esterni.
+              Per evitare di perdere il lavoro, scarica periodicamente un archivio JSON con il pulsante <strong>↓ Archivio</strong>.
+            </div>
+          </div>
+        )}
+
+        {/* ═══ VISTA EDITOR ═══ */}
+        {view === 'editor' && currentProject && (
+          <>
+            {/* Stepper se modalità guidata */}
+            {currentProject.mode === 'guidata' && (
+              <Stepper
+                currentStep={currentProject.currentStep || 1}
+                completedSteps={currentProject.completedSteps || []}
+                onJump={setStep}
+              />
+            )}
+
+            {/* Step guidati 1-4 */}
+            {currentProject.mode === 'guidata' && (currentProject.currentStep || 1) <= 4 && (
+              <>
+                {renderGuidedStep()}
+                <div className="step-nav">
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setStep(Math.max(1, (currentProject.currentStep || 1) - 1))}
+                    disabled={(currentProject.currentStep || 1) <= 1}
+                  >
+                    ← Passo precedente
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setStep(Math.min(7, (currentProject.currentStep || 1) + 1))}
+                  >
+                    {(currentProject.currentStep || 1) === 4 ? 'Procedi alla composizione (Passo 5)' : 'Passo successivo →'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Editor tessere (libera, oppure guidata steps 5-7) */}
+            {showEditorTiles && (
+              <div className={(currentProject.originalText && currentProject.mode === 'guidata') ? 'split-layout with-sidebar' : 'split-layout'}>
+                <div>
+                  <div className="panel editor-only">
+                    <input
+                      type="text"
+                      className="title-input"
+                      value={currentProject.title}
+                      onChange={e => updateTitle(e.target.value)}
+                      placeholder="Titolo della traduzione CAA"
+                      aria-label="Titolo del progetto"
+                    />
+                    {currentProject.mode === 'guidata' && (currentProject.currentStep || 1) === 5 && (
+                      <div className="help-tip">
+                        <strong>Passo 5 — Codifica Fitzgerald.</strong> Per ogni parola della frase
+                        semplificata, aggiungi una tessera e scegli la <em>categoria grammaticale</em>
+                        (colore). Passa con il mouse sopra ogni colore per vederne la spiegazione.
+                      </div>
+                    )}
+                    {currentProject.mode === 'guidata' && (currentProject.currentStep || 1) === 6 && (
+                      <div className="help-tip">
+                        <strong>Passo 6 — Pittogrammi.</strong> Per ogni tessera, scegli il pittogramma
+                        più adatto. Quando un'icona diretta non basta, prova combinazioni di due emoji
+                        o usa la <em>modalità testo</em> per nomi di opere e date.
+                      </div>
+                    )}
+                    {currentProject.mode === 'guidata' && (currentProject.currentStep || 1) === 7 && (
+                      <SpeechReader project={currentProject} />
+                    )}
+                    {(!currentProject.mode || currentProject.mode === 'libera') && (
+                      <div className="help-tip">
+                        Tocca una tessera per modificarla. Il salvataggio è automatico.
+                        Passa il mouse sui colori per scoprire le categorie grammaticali.
+                      </div>
+                    )}
+
+                    {currentProject.nuclei.map(nucleus => (
+                      <NucleusBlock
+                        key={nucleus.id}
+                        nucleus={nucleus}
+                        onUpdate={updateNucleus}
+                        onDelete={() => deleteNucleus(nucleus.id)}
+                        isOnly={currentProject.nuclei.length <= 1}
+                        warnings={warnings}
+                      />
+                    ))}
+                    <button className="btn btn-secondary" onClick={addNucleus} style={{marginTop: 8}}>
+                      + Aggiungi nucleo di significato
+                    </button>
+                  </div>
+
+                  {/* Stepper guidato — bottoni navigazione anche per steps 5-7 */}
+                  {currentProject.mode === 'guidata' && (
+                    <div className="step-nav">
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => setStep(Math.max(1, (currentProject.currentStep || 1) - 1))}
+                      >
+                        ← Passo precedente
+                      </button>
+                      {(currentProject.currentStep || 1) < 7 && (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setStep((currentProject.currentStep || 1) + 1)}
+                        >
+                          Passo successivo →
+                        </button>
+                      )}
+                      {(currentProject.currentStep || 1) === 7 && (
+                        <button className="btn btn-success" onClick={() => setView('preview')}>
+                          Vai all'anteprima →
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Validatore */}
+                  <div className="panel editor-only" style={{padding: 16}}>
+                    <ValidatorPanel warnings={warnings} />
+                  </div>
+
+                  {/* Lettore vocale (sempre disponibile) */}
+                  {(!currentProject.mode || currentProject.mode === 'libera' || (currentProject.currentStep || 1) === 7) && currentProject.mode !== 'guidata' && (
+                    <div className="panel editor-only" style={{padding: 16}}>
+                      <SpeechReader project={currentProject} />
+                    </div>
+                  )}
+
+                  {/* Esportazione */}
+                  <div className="panel editor-only">
+                    <div className="panel-title">Esporta la tavola</div>
+                    <div className="panel-subtitle">Salva la traduzione finita in vari formati.</div>
+                    <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                      <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>↓ Scarica in PDF</button>
+                      <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>↓ Scarica come immagine</button>
+                      <button className="btn btn-secondary" onClick={handlePrint}>⎙ Stampa la tavola</button>
+                      <button className="btn btn-ghost" onClick={exportCurrentJSON}>↓ Esporta progetto (JSON)</button>
+                    </div>
+                  </div>
+
+                  {/* Checklist pre-consegna */}
+                  <div className="panel editor-only">
+                    <div className="panel-title">Verifica pre-consegna</div>
+                    <div className="panel-subtitle">
+                      Le sedici voci della <em>Sezione 7</em> della Guida Operativa CAA.
+                    </div>
+                    <PreSubmitChecklist checks={checks} onChange={setChecks} />
+                  </div>
+                </div>
+
+                {/* Sidebar testo originale (modalità guidata) */}
+                {currentProject.originalText && currentProject.mode === 'guidata' && (
+                  <OriginalSidebar project={currentProject} />
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ═══ VISTA ANTEPRIMA ═══ */}
+        {view === 'preview' && currentProject && (
+          <>
+            <div className="panel editor-only" style={{display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center'}}>
+              <div style={{flex: 1, fontSize: 13, color: 'var(--p-ink-light)', fontFamily: 'var(--serif)', fontStyle: 'italic', minWidth: 200}}>
+                Anteprima fedele della tavola finale. Pronto per stampa, PDF o condivisione.
+              </div>
+              <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>↓ PDF</button>
+              <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>↓ Immagine</button>
+              <button className="btn btn-secondary" onClick={handlePrint}>⎙ Stampa</button>
+            </div>
+            <PreviewView project={currentProject} />
+          </>
+        )}
+
+        {!currentProject && view !== 'projects' && (
+          <div className="panel">
+            <div className="empty-state">
+              <div className="empty-state-icon">∅</div>
+              <div className="empty-state-text">Nessuna traduzione attiva</div>
+              <div className="empty-state-hint">Vai a "Le tue traduzioni" per crearne una nuova.</div>
+              <button className="btn btn-primary btn-large" onClick={startNewProject} style={{marginTop: 14}}>+ Nuova traduzione</button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {showModeChoice && <ModeChoiceModal />}
+      <Toast message={toast} onDone={() => setToast('')} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
 </script>
 </body>
 </html>
