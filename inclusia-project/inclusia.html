@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F2F2F0">
+<title>Inclusia — Editor CAA</title>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #F2F2F0;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* HEADER */
+  .app-header {
+    background: #ffffff; border-bottom: 1px solid #E0E0E0;
+    padding: 12px 16px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    position: sticky; top: 0; z-index: 50; flex-wrap: wrap;
+  }
+  .app-title { font-size: 16px; font-weight: 800; color: #333; letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px; }
+  .app-title .icon { font-size: 22px; }
+  .header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .undo-redo { display: flex; gap: 2px; margin-right: 6px; }
+
+  /* BOTTONI */
+  .btn {
+    border: none; border-radius: 8px; padding: 9px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit; white-space: nowrap; user-select: none;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn:disabled:active { transform: none; }
+  .btn-primary { background: #1565C0; color: white; }
+  .btn-primary:hover:not(:disabled) { background: #0D47A1; }
+  .btn-secondary { background: #ECEFF1; color: #455A64; }
+  .btn-secondary:hover:not(:disabled) { background: #CFD8DC; }
+  .btn-danger { background: #FFEBEE; color: #C62828; }
+  .btn-danger:hover:not(:disabled) { background: #FFCDD2; }
+  .btn-success { background: #E8F5E9; color: #2E7D32; }
+  .btn-success:hover:not(:disabled) { background: #C8E6C9; }
+  .btn-icon { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: 6px; font-size: 14px; }
+  .btn-small { padding: 6px 10px; font-size: 12px; }
+
+  /* TAB NAV */
+  .tab-nav { display: flex; background: #ffffff; border-bottom: 1px solid #E0E0E0; overflow-x: auto; }
+  .tab-btn {
+    background: transparent; border: none; padding: 12px 18px;
+    font-size: 13px; font-weight: 600; color: #888; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.15s;
+    font-family: inherit; white-space: nowrap;
+  }
+  .tab-btn.active { color: #1565C0; border-bottom-color: #1565C0; }
+  .tab-btn:hover:not(:disabled) { color: #1565C0; }
+  .tab-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .app-main { flex: 1; padding: 16px; max-width: 1400px; width: 100%; margin: 0 auto; }
+
+  /* PANEL */
+  .panel { background: white; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .panel-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+  /* PROGETTI */
+  .project-search {
+    width: 100%; border: 1px solid #DDD; border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; margin-bottom: 14px;
+    font-family: inherit; outline: none; background: #FAFAFA;
+  }
+  .project-search:focus { border-color: #1565C0; background: white; }
+  .project-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .project-card { border: 2px solid #E0E0E0; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.15s; background: white; }
+  .project-card:hover { border-color: #1565C0; transform: translateY(-1px); }
+  .project-card.active { border-color: #1565C0; background: #E3F2FD; }
+  .project-card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #333; word-break: break-word; }
+  .project-card-meta { font-size: 11px; color: #888; display: flex; justify-content: space-between; align-items: center; }
+  .project-card-actions { display: flex; gap: 4px; margin-top: 8px; }
+
+  /* EDITOR */
+  .title-input {
+    width: 100%; border: none; border-bottom: 2px solid #E0E0E0;
+    padding: 10px 4px; font-size: 18px; font-weight: 700;
+    background: transparent; color: #333; font-family: inherit;
+    outline: none; margin-bottom: 16px;
+  }
+  .title-input:focus { border-bottom-color: #1565C0; }
+
+  .nucleus-block { background: #FAFAFA; border-radius: 10px; padding: 14px; margin-bottom: 14px; border: 1px solid #EEEEEE; }
+  .nucleus-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .nucleus-title-input {
+    flex: 1; min-width: 180px; border: 1px solid #DDDDDD; border-radius: 6px;
+    padding: 8px 10px; font-size: 13px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 1px; font-family: inherit;
+    background: white; outline: none;
+  }
+  .nucleus-title-input:focus { border-color: #1565C0; }
+
+  /* TESSERE */
+  .tiles-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+  .tile-edit {
+    width: 110px; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12); background: white;
+    cursor: pointer; transition: all 0.15s; position: relative; flex-shrink: 0;
+  }
+  .tile-edit:focus-visible { outline: 3px solid #1565C0; outline-offset: 2px; }
+  .tile-edit:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .tile-edit.selected { box-shadow: 0 0 0 3px #1565C0; }
+  .tile-emoji-area { padding: 14px 8px 10px; text-align: center; font-size: 42px; min-height: 74px; display: flex; align-items: center; justify-content: center; background: white; }
+  .tile-emoji-area.text-mode { font-size: 18px; font-weight: 900; line-height: 1.25; padding: 10px 6px; }
+  .tile-label { padding: 8px 5px; text-align: center; font-weight: 800; font-size: 9.5px; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.35; min-height: 34px; display: flex; align-items: center; justify-content: center; word-break: break-word; }
+  .tile-delete-btn {
+    position: absolute; top: -6px; right: -6px; width: 26px; height: 26px;
+    border-radius: 50%; background: #C62828; color: white; border: 2px solid white;
+    font-size: 13px; font-weight: 700; cursor: pointer; display: none;
+    align-items: center; justify-content: center; line-height: 1; z-index: 5;
+  }
+  .tile-edit:hover .tile-delete-btn,
+  .tile-edit.selected .tile-delete-btn,
+  .tile-edit:focus-visible .tile-delete-btn { display: flex; }
+
+  .add-tile-btn {
+    width: 110px; height: 108px; border: 2px dashed #BBBBBB;
+    border-radius: 12px; background: transparent; cursor: pointer;
+    font-size: 32px; color: #999; transition: all 0.15s; flex-shrink: 0;
+  }
+  .add-tile-btn:hover, .add-tile-btn:focus-visible { border-color: #1565C0; color: #1565C0; background: rgba(21, 101, 192, 0.05); outline: none; }
+
+  /* FITZGERALD */
+  .fitz-grigio  { background: #F5F5F5; }
+  .fitz-grigio  .tile-emoji-area, .fitz-grigio  .preview-tile-emoji { background: #F5F5F5; }
+  .fitz-grigio  .tile-label, .fitz-grigio  .preview-tile-label { background: #9E9E9E; }
+  .fitz-giallo  { background: #FFFDE7; }
+  .fitz-giallo  .tile-emoji-area, .fitz-giallo  .preview-tile-emoji { background: #FFFDE7; }
+  .fitz-giallo  .tile-label, .fitz-giallo  .preview-tile-label { background: #F9A825; }
+  .fitz-arancio { background: #FFF8E1; }
+  .fitz-arancio .tile-emoji-area, .fitz-arancio .preview-tile-emoji { background: #FFF8E1; }
+  .fitz-arancio .tile-label, .fitz-arancio .preview-tile-label { background: #EF6C00; }
+  .fitz-verde   { background: #F1F8E9; }
+  .fitz-verde   .tile-emoji-area, .fitz-verde   .preview-tile-emoji { background: #F1F8E9; }
+  .fitz-verde   .tile-label, .fitz-verde   .preview-tile-label { background: #388E3C; }
+  .fitz-blu     { background: #E3F2FD; }
+  .fitz-blu     .tile-emoji-area, .fitz-blu     .preview-tile-emoji { background: #E3F2FD; }
+  .fitz-blu     .tile-label, .fitz-blu     .preview-tile-label { background: #1565C0; }
+  .fitz-viola   { background: #F3E5F5; }
+  .fitz-viola   .tile-emoji-area, .fitz-viola   .preview-tile-emoji { background: #F3E5F5; }
+  .fitz-viola   .tile-label, .fitz-viola   .preview-tile-label { background: #7B1FA2; }
+  .fitz-rosa    { background: #FCE4EC; }
+  .fitz-rosa    .tile-emoji-area, .fitz-rosa    .preview-tile-emoji { background: #FCE4EC; }
+  .fitz-rosa    .tile-label, .fitz-rosa    .preview-tile-label { background: #C2185B; }
+
+  .fitz-grigio.text-mode .tile-emoji-area, .fitz-grigio.text-mode .preview-tile-emoji   { color: #555; }
+  .fitz-giallo.text-mode .tile-emoji-area, .fitz-giallo.text-mode .preview-tile-emoji   { color: #F9A825; }
+  .fitz-arancio.text-mode .tile-emoji-area, .fitz-arancio.text-mode .preview-tile-emoji { color: #EF6C00; font-style: italic; }
+  .fitz-verde.text-mode .tile-emoji-area, .fitz-verde.text-mode .preview-tile-emoji     { color: #388E3C; }
+  .fitz-blu.text-mode .tile-emoji-area, .fitz-blu.text-mode .preview-tile-emoji         { color: #1565C0; }
+  .fitz-viola.text-mode .tile-emoji-area, .fitz-viola.text-mode .preview-tile-emoji     { color: #7B1FA2; }
+  .fitz-rosa.text-mode .tile-emoji-area, .fitz-rosa.text-mode .preview-tile-emoji       { color: #C2185B; }
+
+  /* EDITOR PANNELLO */
+  .tile-editor-panel { background: #FFFBEB; border: 2px solid #F9A825; border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .tile-editor-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .tile-editor-row:last-child { margin-bottom: 0; }
+  .tile-editor-label { font-size: 12px; font-weight: 700; color: #555; min-width: 80px; }
+  .text-input { border: 1px solid #DDD; border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: inherit; background: white; outline: none; flex: 1; min-width: 100px; }
+  .text-input:focus { border-color: #1565C0; }
+
+  /* SELETTORE COLORE */
+  .color-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+  .color-chip { width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; cursor: pointer; transition: all 0.15s; box-shadow: 0 0 0 1px #DDD; }
+  .color-chip:hover { transform: scale(1.1); }
+  .color-chip.selected { box-shadow: 0 0 0 2px #333; transform: scale(1.05); }
+
+  .toggle-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #555; user-select: none; }
+  .toggle-switch input { display: none; }
+  .toggle-track { width: 38px; height: 22px; background: #CCC; border-radius: 11px; position: relative; transition: background 0.2s; }
+  .toggle-track::after { content: ''; position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle-switch input:checked + .toggle-track { background: #1565C0; }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; animation: fadeIn 0.15s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-content.modal-small { max-width: 440px; }
+  .modal-header { padding: 14px 16px; border-bottom: 1px solid #E0E0E0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 12px 16px; border-top: 1px solid #E0E0E0; display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* EMOJI PICKER */
+  .picker-toolbar { padding: 10px 14px; border-bottom: 1px solid #EEE; background: white; position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; flex-direction: column; }
+  .picker-custom-row { display: flex; gap: 6px; }
+  .picker-search { border: 1px solid #DDD; border-radius: 8px; padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none; flex: 1; }
+  .picker-search:focus { border-color: #1565C0; }
+  .picker-cat-nav { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+  .picker-cat-btn {
+    border: 1px solid #E0E0E0; background: white; border-radius: 16px;
+    padding: 4px 12px; font-size: 12px; font-weight: 600; color: #555;
+    cursor: pointer; white-space: nowrap; font-family: inherit;
+  }
+  .picker-cat-btn.active { background: #1565C0; color: white; border-color: #1565C0; }
+  .emoji-category-header {
+    font-size: 11px; font-weight: 700; color: #888;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 12px 14px 6px;
+    background: white;
+    position: sticky; top: 0; z-index: 1;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; padding: 0 14px 8px; }
+  .emoji-btn {
+    width: 100%; aspect-ratio: 1; border: 1px solid transparent;
+    border-radius: 8px; background: #F5F5F5; cursor: pointer;
+    font-size: 26px; transition: all 0.1s; display: flex;
+    align-items: center; justify-content: center;
+    font-family: "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;
+  }
+  .emoji-btn:hover, .emoji-btn:focus-visible { background: #E3F2FD; border-color: #1565C0; transform: scale(1.05); outline: none; }
+  .emoji-empty { padding: 24px 14px; text-align: center; color: #999; font-size: 13px; }
+
+  /* TEMPLATES MODAL */
+  .templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .template-card {
+    border: 2px solid #E0E0E0; border-radius: 10px; padding: 14px;
+    cursor: pointer; transition: all 0.15s; background: white;
+    text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center;
+  }
+  .template-card:hover, .template-card:focus-visible { border-color: #1565C0; background: #E3F2FD; outline: none; }
+  .template-icon { font-size: 36px; }
+  .template-name { font-weight: 700; font-size: 13px; }
+  .template-desc { font-size: 11px; color: #777; line-height: 1.3; }
+
+  /* TILE LIBRARY */
+  .library-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px; }
+  .library-mini-tile {
+    width: 70px; height: 70px; border-radius: 8px; overflow: hidden;
+    flex-shrink: 0; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    transition: transform 0.15s; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .library-mini-tile:hover, .library-mini-tile:focus-visible { transform: translateY(-2px); outline: none; box-shadow: 0 3px 8px rgba(0,0,0,0.18); }
+  .library-mini-emoji { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+  .library-mini-emoji.text-mode { font-size: 11px; font-weight: 800; padding: 2px; text-align: center; }
+  .library-mini-label { color: white; font-size: 7px; font-weight: 800; text-transform: uppercase; padding: 3px; text-align: center; line-height: 1.1; word-break: break-word; max-height: 22px; overflow: hidden; }
+  .library-empty { padding: 14px; color: #999; font-size: 12px; font-style: italic; text-align: center; }
+
+  /* PREVIEW */
+  .preview-container { background: white; border-radius: 12px; padding: 32px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .preview-doc-title { text-align: center; font-size: 14px; font-weight: 700; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-bottom: 24px; }
+  .preview-legenda { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 32px; }
+  .preview-legenda-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #777; font-weight: 600; letter-spacing: 0.3px; }
+  .preview-legenda-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .preview-nucleus { margin-bottom: 36px; }
+  .preview-nucleus-title { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; color: #999; text-transform: uppercase; margin-bottom: 14px; }
+  .preview-tiles-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: flex-end; }
+  .preview-tile { width: 110px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); flex-shrink: 0; }
+  .preview-tile-emoji { padding: 14px 8px 10px; text-align: center; font-size: 42px; min-height: 74px; display: flex; align-items: center; justify-content: center; }
+  .preview-tile.text-mode .preview-tile-emoji { font-size: 18px; font-weight: 900; line-height: 1.25; padding: 10px 6px; }
+  .preview-tile-label { padding: 8px 5px; text-align: center; font-weight: 800; font-size: 9.5px; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.35; min-height: 34px; display: flex; align-items: center; justify-content: center; word-break: break-word; }
+
+  /* OPENMOJI IMAGE */
+  .emoji-img {
+    display: inline-block;
+    vertical-align: middle;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+  }
+  .emoji-img.loading { opacity: 0.45; }
+
+  /* PICKER TAB STRUCTURE */
+  .picker-tabs {
+    display: flex;
+    border-bottom: 1px solid #E0E0E0;
+    background: white;
+    position: sticky; top: 0; z-index: 3;
+  }
+  .picker-tab {
+    flex: 1; background: transparent; border: none; padding: 12px 8px;
+    font-size: 13px; font-weight: 700; color: #888; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.15s; font-family: inherit;
+  }
+  .picker-tab.active { color: #1565C0; border-bottom-color: #1565C0; }
+  .picker-tab:hover { color: #1565C0; }
+
+  /* VOCAB BROWSE */
+  .vocab-fitz-header {
+    font-size: 11px; font-weight: 700; padding: 10px 14px 6px;
+    text-transform: uppercase; letter-spacing: 1px; background: white;
+    position: sticky; top: 0; z-index: 1; border-bottom: 1px solid #F0F0F0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .vocab-fitz-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .vocab-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 6px; padding: 0 14px 8px;
+  }
+  .vocab-card {
+    border: 1px solid #E0E0E0; background: white; border-radius: 8px;
+    padding: 6px 4px; cursor: pointer; transition: all 0.15s; text-align: center;
+    font-family: inherit; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; min-height: 72px; justify-content: center; position: relative;
+  }
+  .vocab-card:hover, .vocab-card:focus-visible {
+    border-color: #1565C0; background: #F5FAFE; transform: translateY(-1px); outline: none;
+  }
+  .vocab-card.no-emoji { background: #FFFBEB; border-color: #FCD34D; }
+  .vocab-card .vocab-emoji-area { font-size: 26px; line-height: 1; height: 32px; display: flex; align-items: center; justify-content: center; }
+  .vocab-card .vocab-word { font-size: 10px; font-weight: 700; color: #333; line-height: 1.1; word-break: break-word; }
+  .vocab-card .no-emoji-badge { position: absolute; top: 2px; right: 4px; font-size: 9px; color: #B45309; }
+
+  /* SUGGESTIONS MODAL */
+  .suggestions-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px; margin: 14px 0;
+  }
+  .suggestion-card {
+    border: 2px solid #E0E0E0; background: white; border-radius: 10px;
+    padding: 12px 6px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .suggestion-card:hover, .suggestion-card:focus-visible {
+    border-color: #1565C0; background: #E3F2FD; transform: translateY(-2px); outline: none;
+  }
+  .suggestion-emoji-area { font-size: 38px; line-height: 1; height: 44px; display: flex; align-items: center; justify-content: center; }
+
+  /* STATO VUOTO */
+  .empty-state { text-align: center; padding: 40px 16px; color: #999; }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-text { font-size: 14px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #333; color: white; padding: 12px 20px;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 200;
+    animation: toastIn 0.2s ease-out;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  /* HELP TIP */
+  .help-tip { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #455A64; margin-bottom: 14px; line-height: 1.5; }
+  .help-tip kbd { background: white; border: 1px solid #BBB; border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: monospace; box-shadow: 0 1px 0 #BBB; }
+
+  /* ERROR SCREEN */
+  .error-screen { padding: 40px 20px; text-align: center; max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .error-screen h2 { color: #C62828; margin-bottom: 12px; font-size: 22px; }
+  .error-screen p { color: #555; margin-bottom: 16px; }
+  .error-screen pre { background: #FFF3E0; padding: 12px; border-radius: 6px; font-size: 11px; text-align: left; overflow-x: auto; color: #5D4037; margin-bottom: 16px; }
+
+  /* MOBILE */
+  @media (max-width: 600px) {
+    .app-main { padding: 10px; }
+    .panel { padding: 14px; }
+    .app-title { font-size: 14px; }
+    .app-title .icon { font-size: 18px; }
+    .btn { padding: 8px 11px; font-size: 12px; }
+    .btn-icon { width: 30px; height: 30px; }
+    .tile-edit, .preview-tile, .add-tile-btn { width: 92px; }
+    .add-tile-btn { height: 96px; }
+    .tile-emoji-area, .preview-tile-emoji { font-size: 34px; min-height: 64px; padding: 10px 6px 8px; }
+    .tile-label, .preview-tile-label { font-size: 8.5px; padding: 6px 4px; min-height: 30px; }
+    .tile-emoji-area.text-mode, .preview-tile.text-mode .preview-tile-emoji { font-size: 14px; }
+    .preview-container { padding: 18px 10px; }
+    .nucleus-block { padding: 12px 10px; }
+    .header-actions { gap: 4px; }
+  }
+
+  /* PRINT */
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: white; }
+    .app-header, .tab-nav, .panel:not(.print-area), .editor-only, .help-tip { display: none !important; }
+    .app-main { padding: 0; max-width: none; }
+    .preview-container { box-shadow: none; padding: 0; border-radius: 0; }
+    .preview-tile { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+    .preview-nucleus { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ════════════════════════════════════════════════════════════
+   DATI: COLORI FITZGERALD
+   ════════════════════════════════════════════════════════════ */
+const FITZGERALD = [
+  { key: 'grigio',  name: 'Articolo / Pronome / Preposizione', label: '#9E9E9E' },
+  { key: 'giallo',  name: 'Sostantivo',                         label: '#F9A825' },
+  { key: 'arancio', name: 'Nome proprio',                       label: '#EF6C00' },
+  { key: 'verde',   name: 'Verbo',                              label: '#388E3C' },
+  { key: 'blu',     name: 'Aggettivo / Avverbio',               label: '#1565C0' },
+  { key: 'viola',   name: 'Tempo',                              label: '#7B1FA2' },
+  { key: 'rosa',    name: 'Congiunzione / Connettivo',          label: '#C2185B' },
+];
+
+/* Background chiari per ogni Fitzgerald — usati nel PDF vettoriale */
+const FITZ_BG = {
+  grigio:[245,245,245], giallo:[255,253,231], arancio:[255,248,225],
+  verde:[241,248,233],  blu:[227,242,253],    viola:[243,229,245],
+  rosa:[252,228,236]
+};
+const FITZ_LABEL = {
+  grigio:[158,158,158], giallo:[249,168,37], arancio:[239,108,0],
+  verde:[56,142,60],    blu:[21,101,192],    viola:[123,31,162],
+  rosa:[194,24,91]
+};
+
+/* ════════════════════════════════════════════════════════════
+   EMOJI DATA (868 voci, 5 categorie)
+   ════════════════════════════════════════════════════════════ */
+const EMOJI_DATA = {
+  "Persone": [
+    {c:"bowtie",e:"🤵"},{c:"smile",e:"😄"},{c:"laughing",e:"😆"},{c:"blush",e:"😊"},{c:"smiley",e:"😃"},{c:"relaxed",e:"☺️"},{c:"smirk",e:"😏"},{c:"heart_eyes",e:"😍"},{c:"kissing_heart",e:"😘"},{c:"kissing_closed_eyes",e:"😚"},{c:"flushed",e:"😳"},{c:"relieved",e:"😌"},{c:"satisfied",e:"😆"},{c:"grin",e:"😁"},{c:"wink",e:"😉"},{c:"stuck_out_tongue_winking_eye",e:"😜"},{c:"stuck_out_tongue_closed_eyes",e:"😝"},{c:"grinning",e:"😀"},{c:"kissing",e:"😗"},{c:"kissing_smiling_eyes",e:"😙"},{c:"stuck_out_tongue",e:"😛"},{c:"sleeping",e:"😴"},{c:"worried",e:"😟"},{c:"frowning",e:"😦"},{c:"anguished",e:"😧"},{c:"open_mouth",e:"😮"},{c:"grimacing",e:"😬"},{c:"confused",e:"😕"},{c:"hushed",e:"😯"},{c:"expressionless",e:"😑"},{c:"unamused",e:"😒"},{c:"sweat_smile",e:"😅"},{c:"sweat",e:"😓"},{c:"disappointed_relieved",e:"😥"},{c:"weary",e:"😩"},{c:"pensive",e:"😔"},{c:"disappointed",e:"😞"},{c:"confounded",e:"😖"},{c:"fearful",e:"😨"},{c:"cold_sweat",e:"😰"},{c:"persevere",e:"😣"},{c:"cry",e:"😢"},{c:"sob",e:"😭"},{c:"joy",e:"😂"},{c:"astonished",e:"😲"},{c:"scream",e:"😱"},{c:"neckbeard",e:"🧔"},{c:"tired_face",e:"😫"},{c:"angry",e:"😠"},{c:"rage",e:"😡"},{c:"triumph",e:"😤"},{c:"sleepy",e:"😪"},{c:"yum",e:"😋"},{c:"mask",e:"😷"},{c:"sunglasses",e:"😎"},{c:"dizzy_face",e:"😵"},{c:"imp",e:"👿"},{c:"smiling_imp",e:"😈"},{c:"neutral_face",e:"😐"},{c:"no_mouth",e:"😶"},{c:"innocent",e:"😇"},{c:"alien",e:"👽"},
+    {c:"yellow_heart",e:"💛"},{c:"blue_heart",e:"💙"},{c:"purple_heart",e:"💜"},{c:"heart",e:"❤️"},{c:"green_heart",e:"💚"},{c:"broken_heart",e:"💔"},{c:"heartbeat",e:"💓"},{c:"heartpulse",e:"💗"},{c:"two_hearts",e:"💕"},{c:"revolving_hearts",e:"💞"},{c:"cupid",e:"💘"},{c:"sparkling_heart",e:"💖"},{c:"sparkles",e:"✨"},{c:"star",e:"⭐"},{c:"star2",e:"🌟"},{c:"dizzy",e:"💫"},{c:"boom",e:"💥"},{c:"collision",e:"💥"},{c:"anger",e:"💢"},{c:"exclamation",e:"❗"},{c:"question",e:"❓"},{c:"grey_exclamation",e:"❕"},{c:"grey_question",e:"❔"},{c:"zzz",e:"💤"},{c:"dash",e:"💨"},{c:"sweat_drops",e:"💦"},{c:"notes",e:"🎶"},{c:"musical_note",e:"🎵"},{c:"fire",e:"🔥"},{c:"hankey",e:"💩"},{c:"poop",e:"💩"},
+    {c:"+1",e:"👍"},{c:"thumbsup",e:"👍"},{c:"-1",e:"👎"},{c:"thumbsdown",e:"👎"},{c:"ok_hand",e:"👌"},{c:"punch",e:"👊"},{c:"facepunch",e:"👊"},{c:"fist",e:"✊"},{c:"v",e:"✌️"},{c:"wave",e:"👋"},{c:"hand",e:"✋"},{c:"raised_hand",e:"✋"},{c:"open_hands",e:"👐"},{c:"point_up",e:"☝️"},{c:"point_down",e:"👇"},{c:"point_left",e:"👈"},{c:"point_right",e:"👉"},{c:"raised_hands",e:"🙌"},{c:"pray",e:"🙏"},{c:"point_up_2",e:"👆"},{c:"clap",e:"👏"},{c:"muscle",e:"💪"},{c:"metal",e:"🤘"},
+    {c:"walking",e:"🚶"},{c:"runner",e:"🏃"},{c:"running",e:"🏃"},{c:"couple",e:"👫"},{c:"family",e:"👪"},{c:"two_men_holding_hands",e:"👬"},{c:"two_women_holding_hands",e:"👭"},{c:"dancer",e:"💃"},{c:"dancers",e:"👯"},{c:"ok_woman",e:"🙆"},{c:"no_good",e:"🙅"},{c:"information_desk_person",e:"💁"},{c:"raising_hand",e:"🙋"},{c:"bride_with_veil",e:"👰"},{c:"person_with_pouting_face",e:"🙎"},{c:"person_frowning",e:"🙍"},{c:"bow",e:"🙇"},{c:"couplekiss",e:"💏"},{c:"couple_with_heart",e:"💑"},{c:"massage",e:"💆"},{c:"haircut",e:"💇"},{c:"nail_care",e:"💅"},{c:"boy",e:"👦"},{c:"girl",e:"👧"},{c:"woman",e:"👩"},{c:"man",e:"👨"},{c:"baby",e:"👶"},{c:"older_woman",e:"👵"},{c:"older_man",e:"👴"},{c:"person_with_blond_hair",e:"👱"},{c:"man_with_gua_pi_mao",e:"👲"},{c:"man_with_turban",e:"👳"},{c:"construction_worker",e:"👷"},{c:"cop",e:"👮"},{c:"angel",e:"👼"},{c:"princess",e:"👸"},
+    {c:"smiley_cat",e:"😺"},{c:"smile_cat",e:"😸"},{c:"heart_eyes_cat",e:"😻"},{c:"kissing_cat",e:"😽"},{c:"smirk_cat",e:"😼"},{c:"scream_cat",e:"🙀"},{c:"crying_cat_face",e:"😿"},{c:"joy_cat",e:"😹"},{c:"pouting_cat",e:"😾"},{c:"japanese_ogre",e:"👹"},{c:"japanese_goblin",e:"👺"},{c:"see_no_evil",e:"🙈"},{c:"hear_no_evil",e:"🙉"},{c:"speak_no_evil",e:"🙊"},{c:"guardsman",e:"💂"},{c:"skull",e:"💀"},{c:"feet",e:"🐾"},{c:"lips",e:"👄"},{c:"kiss",e:"💋"},{c:"droplet",e:"💧"},{c:"ear",e:"👂"},{c:"eyes",e:"👀"},{c:"nose",e:"👃"},{c:"tongue",e:"👅"},{c:"love_letter",e:"💌"},{c:"bust_in_silhouette",e:"👤"},{c:"busts_in_silhouette",e:"👥"},{c:"speech_balloon",e:"💬"},{c:"thought_balloon",e:"💭"},{c:"suspect",e:"🕵️"}
+  ],
+  "Natura": [
+    {c:"sunny",e:"☀️"},{c:"umbrella",e:"☔"},{c:"cloud",e:"☁️"},{c:"snowflake",e:"❄️"},{c:"snowman",e:"⛄"},{c:"zap",e:"⚡"},{c:"cyclone",e:"🌀"},{c:"foggy",e:"🌁"},{c:"ocean",e:"🌊"},
+    {c:"cat",e:"🐱"},{c:"dog",e:"🐶"},{c:"mouse",e:"🐭"},{c:"hamster",e:"🐹"},{c:"rabbit",e:"🐰"},{c:"wolf",e:"🐺"},{c:"frog",e:"🐸"},{c:"tiger",e:"🐯"},{c:"koala",e:"🐨"},{c:"bear",e:"🐻"},{c:"pig",e:"🐷"},{c:"pig_nose",e:"🐽"},{c:"cow",e:"🐮"},{c:"boar",e:"🐗"},{c:"monkey_face",e:"🐵"},{c:"monkey",e:"🐒"},{c:"horse",e:"🐴"},{c:"racehorse",e:"🐎"},{c:"camel",e:"🐫"},{c:"sheep",e:"🐑"},{c:"elephant",e:"🐘"},{c:"panda_face",e:"🐼"},{c:"snake",e:"🐍"},{c:"bird",e:"🐦"},{c:"baby_chick",e:"🐤"},{c:"hatched_chick",e:"🐥"},{c:"hatching_chick",e:"🐣"},{c:"chicken",e:"🐔"},{c:"penguin",e:"🐧"},{c:"turtle",e:"🐢"},{c:"bug",e:"🐛"},{c:"honeybee",e:"🐝"},{c:"ant",e:"🐜"},{c:"beetle",e:"🐞"},{c:"snail",e:"🐌"},{c:"octopus",e:"🐙"},{c:"tropical_fish",e:"🐠"},{c:"fish",e:"🐟"},{c:"whale",e:"🐳"},{c:"whale2",e:"🐋"},{c:"dolphin",e:"🐬"},{c:"cow2",e:"🐄"},{c:"ram",e:"🐏"},{c:"rat",e:"🐀"},{c:"water_buffalo",e:"🐃"},{c:"tiger2",e:"🐅"},{c:"rabbit2",e:"🐇"},{c:"dragon",e:"🐉"},{c:"goat",e:"🐐"},{c:"rooster",e:"🐓"},{c:"dog2",e:"🐕"},{c:"pig2",e:"🐖"},{c:"mouse2",e:"🐁"},{c:"ox",e:"🐂"},{c:"dragon_face",e:"🐲"},{c:"blowfish",e:"🐡"},{c:"crocodile",e:"🐊"},{c:"dromedary_camel",e:"🐪"},{c:"leopard",e:"🐆"},{c:"cat2",e:"🐈"},{c:"poodle",e:"🐩"},{c:"paw_prints",e:"🐾"},{c:"squirrel",e:"🐿️"},
+    {c:"bouquet",e:"💐"},{c:"cherry_blossom",e:"🌸"},{c:"tulip",e:"🌷"},{c:"four_leaf_clover",e:"🍀"},{c:"rose",e:"🌹"},{c:"sunflower",e:"🌻"},{c:"hibiscus",e:"🌺"},{c:"maple_leaf",e:"🍁"},{c:"leaves",e:"🍃"},{c:"fallen_leaf",e:"🍂"},{c:"herb",e:"🌿"},{c:"mushroom",e:"🍄"},{c:"cactus",e:"🌵"},{c:"palm_tree",e:"🌴"},{c:"evergreen_tree",e:"🌲"},{c:"deciduous_tree",e:"🌳"},{c:"chestnut",e:"🌰"},{c:"seedling",e:"🌱"},{c:"blossom",e:"🌼"},{c:"ear_of_rice",e:"🌾"},{c:"shell",e:"🐚"},
+    {c:"globe_with_meridians",e:"🌐"},{c:"sun_with_face",e:"🌞"},{c:"full_moon_with_face",e:"🌝"},{c:"new_moon_with_face",e:"🌚"},{c:"new_moon",e:"🌑"},{c:"waxing_crescent_moon",e:"🌒"},{c:"first_quarter_moon",e:"🌓"},{c:"waxing_gibbous_moon",e:"🌔"},{c:"full_moon",e:"🌕"},{c:"waning_gibbous_moon",e:"🌖"},{c:"last_quarter_moon",e:"🌗"},{c:"waning_crescent_moon",e:"🌘"},{c:"last_quarter_moon_with_face",e:"🌜"},{c:"first_quarter_moon_with_face",e:"🌛"},{c:"moon",e:"🌔"},{c:"earth_africa",e:"🌍"},{c:"earth_americas",e:"🌎"},{c:"earth_asia",e:"🌏"},{c:"volcano",e:"🌋"},{c:"milky_way",e:"🌌"},{c:"partly_sunny",e:"⛅"}
+  ],
+  "Oggetti": [
+    {c:"bamboo",e:"🎍"},{c:"gift_heart",e:"💝"},{c:"dolls",e:"🎎"},{c:"school_satchel",e:"🎒"},{c:"mortar_board",e:"🎓"},{c:"flags",e:"🎏"},{c:"fireworks",e:"🎆"},{c:"sparkler",e:"🎇"},{c:"wind_chime",e:"🎐"},{c:"rice_scene",e:"🎑"},{c:"jack_o_lantern",e:"🎃"},{c:"ghost",e:"👻"},{c:"santa",e:"🎅"},{c:"christmas_tree",e:"🎄"},{c:"gift",e:"🎁"},{c:"bell",e:"🔔"},{c:"no_bell",e:"🔕"},{c:"tanabata_tree",e:"🎋"},{c:"tada",e:"🎉"},{c:"confetti_ball",e:"🎊"},{c:"balloon",e:"🎈"},{c:"crystal_ball",e:"🔮"},
+    {c:"cd",e:"💿"},{c:"dvd",e:"📀"},{c:"floppy_disk",e:"💾"},{c:"camera",e:"📷"},{c:"video_camera",e:"📹"},{c:"movie_camera",e:"🎥"},{c:"computer",e:"💻"},{c:"tv",e:"📺"},{c:"iphone",e:"📱"},{c:"phone",e:"☎️"},{c:"telephone",e:"☎️"},{c:"telephone_receiver",e:"📞"},{c:"pager",e:"📟"},{c:"fax",e:"📠"},{c:"minidisc",e:"💽"},{c:"vhs",e:"📼"},{c:"sound",e:"🔉"},{c:"speaker",e:"🔈"},{c:"mute",e:"🔇"},{c:"loudspeaker",e:"📢"},{c:"mega",e:"📣"},{c:"hourglass",e:"⌛"},{c:"hourglass_flowing_sand",e:"⏳"},{c:"alarm_clock",e:"⏰"},{c:"watch",e:"⌚"},{c:"radio",e:"📻"},{c:"satellite",e:"📡"},{c:"loop",e:"➿"},
+    {c:"mag",e:"🔍"},{c:"mag_right",e:"🔎"},{c:"unlock",e:"🔓"},{c:"lock",e:"🔒"},{c:"lock_with_ink_pen",e:"🔏"},{c:"closed_lock_with_key",e:"🔐"},{c:"key",e:"🔑"},{c:"bulb",e:"💡"},{c:"flashlight",e:"🔦"},{c:"high_brightness",e:"🔆"},{c:"low_brightness",e:"🔅"},{c:"electric_plug",e:"🔌"},{c:"battery",e:"🔋"},{c:"calling",e:"📲"},{c:"email",e:"✉️"},{c:"mailbox",e:"📫"},{c:"postbox",e:"📮"},{c:"bath",e:"🛀"},{c:"bathtub",e:"🛁"},{c:"shower",e:"🚿"},{c:"toilet",e:"🚽"},{c:"wrench",e:"🔧"},{c:"nut_and_bolt",e:"🔩"},{c:"hammer",e:"🔨"},{c:"seat",e:"💺"},
+    {c:"moneybag",e:"💰"},{c:"yen",e:"💴"},{c:"dollar",e:"💵"},{c:"pound",e:"💷"},{c:"euro",e:"💶"},{c:"credit_card",e:"💳"},{c:"money_with_wings",e:"💸"},{c:"e-mail",e:"📧"},{c:"inbox_tray",e:"📥"},{c:"outbox_tray",e:"📤"},{c:"envelope",e:"✉️"},{c:"incoming_envelope",e:"📨"},{c:"postal_horn",e:"📯"},{c:"mailbox_closed",e:"📪"},{c:"mailbox_with_mail",e:"📬"},{c:"mailbox_with_no_mail",e:"📭"},{c:"door",e:"🚪"},{c:"smoking",e:"🚬"},{c:"bomb",e:"💣"},{c:"gun",e:"🔫"},{c:"hocho",e:"🔪"},{c:"pill",e:"💊"},{c:"syringe",e:"💉"},
+    {c:"page_facing_up",e:"📄"},{c:"page_with_curl",e:"📃"},{c:"bookmark_tabs",e:"📑"},{c:"bar_chart",e:"📊"},{c:"chart_with_upwards_trend",e:"📈"},{c:"chart_with_downwards_trend",e:"📉"},{c:"scroll",e:"📜"},{c:"clipboard",e:"📋"},{c:"calendar",e:"📆"},{c:"date",e:"📅"},{c:"card_index",e:"📇"},{c:"file_folder",e:"📁"},{c:"open_file_folder",e:"📂"},{c:"scissors",e:"✂️"},{c:"pushpin",e:"📌"},{c:"paperclip",e:"📎"},{c:"black_nib",e:"✒️"},{c:"pencil2",e:"✏️"},{c:"straight_ruler",e:"📏"},{c:"triangular_ruler",e:"📐"},{c:"closed_book",e:"📕"},{c:"green_book",e:"📗"},{c:"blue_book",e:"📘"},{c:"orange_book",e:"📙"},{c:"notebook",e:"📓"},{c:"notebook_with_decorative_cover",e:"📔"},{c:"ledger",e:"📒"},{c:"books",e:"📚"},{c:"bookmark",e:"🔖"},{c:"name_badge",e:"📛"},{c:"microscope",e:"🔬"},{c:"telescope",e:"🔭"},{c:"newspaper",e:"📰"},
+    {c:"football",e:"🏈"},{c:"basketball",e:"🏀"},{c:"soccer",e:"⚽"},{c:"baseball",e:"⚾"},{c:"tennis",e:"🎾"},{c:"8ball",e:"🎱"},{c:"rugby_football",e:"🏉"},{c:"bowling",e:"🎳"},{c:"golf",e:"⛳"},{c:"mountain_bicyclist",e:"🚵"},{c:"bicyclist",e:"🚴"},{c:"horse_racing",e:"🏇"},{c:"snowboarder",e:"🏂"},{c:"swimmer",e:"🏊"},{c:"surfer",e:"🏄"},{c:"ski",e:"🎿"},
+    {c:"spades",e:"♠️"},{c:"hearts",e:"♥️"},{c:"clubs",e:"♣️"},{c:"diamonds",e:"♦️"},{c:"gem",e:"💎"},{c:"ring",e:"💍"},{c:"trophy",e:"🏆"},
+    {c:"musical_score",e:"🎼"},{c:"musical_keyboard",e:"🎹"},{c:"violin",e:"🎻"},{c:"space_invader",e:"👾"},{c:"video_game",e:"🎮"},{c:"black_joker",e:"🃏"},{c:"flower_playing_cards",e:"🎴"},{c:"game_die",e:"🎲"},{c:"dart",e:"🎯"},{c:"mahjong",e:"🀄"},{c:"clapper",e:"🎬"},{c:"memo",e:"📝"},{c:"pencil",e:"📝"},{c:"book",e:"📖"},{c:"art",e:"🎨"},{c:"microphone",e:"🎤"},{c:"headphones",e:"🎧"},{c:"trumpet",e:"🎺"},{c:"saxophone",e:"🎷"},{c:"guitar",e:"🎸"},
+    {c:"shoe",e:"👞"},{c:"sandal",e:"👡"},{c:"high_heel",e:"👠"},{c:"lipstick",e:"💄"},{c:"boot",e:"👢"},{c:"shirt",e:"👕"},{c:"tshirt",e:"👕"},{c:"necktie",e:"👔"},{c:"womans_clothes",e:"👚"},{c:"dress",e:"👗"},{c:"running_shirt_with_sash",e:"🎽"},{c:"jeans",e:"👖"},{c:"kimono",e:"👘"},{c:"bikini",e:"👙"},{c:"ribbon",e:"🎀"},{c:"tophat",e:"🎩"},{c:"crown",e:"👑"},{c:"womans_hat",e:"👒"},{c:"mans_shoe",e:"👞"},{c:"closed_umbrella",e:"🌂"},{c:"briefcase",e:"💼"},{c:"handbag",e:"👜"},{c:"pouch",e:"👝"},{c:"purse",e:"👛"},{c:"eyeglasses",e:"👓"},{c:"fishing_pole_and_fish",e:"🎣"},
+    {c:"coffee",e:"☕"},{c:"tea",e:"🍵"},{c:"sake",e:"🍶"},{c:"baby_bottle",e:"🍼"},{c:"beer",e:"🍺"},{c:"beers",e:"🍻"},{c:"cocktail",e:"🍸"},{c:"tropical_drink",e:"🍹"},{c:"wine_glass",e:"🍷"},{c:"fork_and_knife",e:"🍴"},{c:"pizza",e:"🍕"},{c:"hamburger",e:"🍔"},{c:"fries",e:"🍟"},{c:"poultry_leg",e:"🍗"},{c:"meat_on_bone",e:"🍖"},{c:"spaghetti",e:"🍝"},{c:"curry",e:"🍛"},{c:"fried_shrimp",e:"🍤"},{c:"bento",e:"🍱"},{c:"sushi",e:"🍣"},{c:"fish_cake",e:"🍥"},{c:"rice_ball",e:"🍙"},{c:"rice_cracker",e:"🍘"},{c:"rice",e:"🍚"},{c:"ramen",e:"🍜"},{c:"stew",e:"🍲"},{c:"oden",e:"🍢"},{c:"dango",e:"🍡"},{c:"egg",e:"🥚"},{c:"bread",e:"🍞"},{c:"doughnut",e:"🍩"},{c:"custard",e:"🍮"},{c:"icecream",e:"🍦"},{c:"ice_cream",e:"🍨"},{c:"shaved_ice",e:"🍧"},{c:"birthday",e:"🎂"},{c:"cake",e:"🍰"},{c:"cookie",e:"🍪"},{c:"chocolate_bar",e:"🍫"},{c:"candy",e:"🍬"},{c:"lollipop",e:"🍭"},{c:"honey_pot",e:"🍯"},{c:"apple",e:"🍎"},{c:"green_apple",e:"🍏"},{c:"tangerine",e:"🍊"},{c:"lemon",e:"🍋"},{c:"cherries",e:"🍒"},{c:"grapes",e:"🍇"},{c:"watermelon",e:"🍉"},{c:"strawberry",e:"🍓"},{c:"peach",e:"🍑"},{c:"melon",e:"🍈"},{c:"banana",e:"🍌"},{c:"pear",e:"🍐"},{c:"pineapple",e:"🍍"},{c:"sweet_potato",e:"🍠"},{c:"eggplant",e:"🍆"},{c:"tomato",e:"🍅"},{c:"corn",e:"🌽"}
+  ],
+  "Luoghi": [
+    {c:"house",e:"🏠"},{c:"house_with_garden",e:"🏡"},{c:"school",e:"🏫"},{c:"office",e:"🏢"},{c:"post_office",e:"🏣"},{c:"hospital",e:"🏥"},{c:"bank",e:"🏦"},{c:"convenience_store",e:"🏪"},{c:"love_hotel",e:"🏩"},{c:"hotel",e:"🏨"},{c:"wedding",e:"💒"},{c:"church",e:"⛪"},{c:"department_store",e:"🏬"},{c:"european_post_office",e:"🏤"},{c:"city_sunrise",e:"🌇"},{c:"city_sunset",e:"🌆"},{c:"japanese_castle",e:"🏯"},{c:"european_castle",e:"🏰"},{c:"tent",e:"⛺"},{c:"factory",e:"🏭"},{c:"tokyo_tower",e:"🗼"},{c:"japan",e:"🗾"},{c:"mount_fuji",e:"🗻"},{c:"sunrise_over_mountains",e:"🌄"},{c:"sunrise",e:"🌅"},{c:"stars",e:"🌠"},{c:"statue_of_liberty",e:"🗽"},{c:"bridge_at_night",e:"🌉"},{c:"carousel_horse",e:"🎠"},{c:"rainbow",e:"🌈"},{c:"ferris_wheel",e:"🎡"},{c:"fountain",e:"⛲"},{c:"roller_coaster",e:"🎢"},
+    {c:"ship",e:"🚢"},{c:"speedboat",e:"🚤"},{c:"boat",e:"⛵"},{c:"sailboat",e:"⛵"},{c:"rowboat",e:"🚣"},{c:"anchor",e:"⚓"},{c:"rocket",e:"🚀"},{c:"airplane",e:"✈️"},{c:"helicopter",e:"🚁"},{c:"steam_locomotive",e:"🚂"},{c:"tram",e:"🚊"},{c:"mountain_railway",e:"🚞"},{c:"bike",e:"🚲"},{c:"aerial_tramway",e:"🚡"},{c:"suspension_railway",e:"🚟"},{c:"mountain_cableway",e:"🚠"},{c:"tractor",e:"🚜"},{c:"blue_car",e:"🚙"},{c:"oncoming_automobile",e:"🚘"},{c:"car",e:"🚗"},{c:"red_car",e:"🚗"},{c:"taxi",e:"🚕"},{c:"oncoming_taxi",e:"🚖"},{c:"articulated_lorry",e:"🚛"},{c:"bus",e:"🚌"},{c:"oncoming_bus",e:"🚍"},{c:"rotating_light",e:"🚨"},{c:"police_car",e:"🚓"},{c:"oncoming_police_car",e:"🚔"},{c:"fire_engine",e:"🚒"},{c:"ambulance",e:"🚑"},{c:"minibus",e:"🚐"},{c:"truck",e:"🚚"},{c:"train",e:"🚋"},{c:"station",e:"🚉"},{c:"train2",e:"🚆"},{c:"bullettrain_front",e:"🚅"},{c:"bullettrain_side",e:"🚄"},{c:"light_rail",e:"🚈"},{c:"monorail",e:"🚝"},{c:"railway_car",e:"🚃"},{c:"trolleybus",e:"🚎"},{c:"ticket",e:"🎫"},{c:"fuelpump",e:"⛽"},{c:"vertical_traffic_light",e:"🚦"},{c:"traffic_light",e:"🚥"},{c:"warning",e:"⚠️"},{c:"construction",e:"🚧"},{c:"beginner",e:"🔰"},{c:"atm",e:"🏧"},{c:"slot_machine",e:"🎰"},{c:"busstop",e:"🚏"},{c:"barber",e:"💈"},{c:"hotsprings",e:"♨️"},{c:"checkered_flag",e:"🏁"},{c:"crossed_flags",e:"🎌"},{c:"izakaya_lantern",e:"🏮"},{c:"moyai",e:"🗿"},{c:"circus_tent",e:"🎪"},{c:"performing_arts",e:"🎭"},{c:"round_pushpin",e:"📍"},{c:"triangular_flag_on_post",e:"🚩"},
+    {c:"jp",e:"🇯🇵"},{c:"kr",e:"🇰🇷"},{c:"cn",e:"🇨🇳"},{c:"us",e:"🇺🇸"},{c:"fr",e:"🇫🇷"},{c:"es",e:"🇪🇸"},{c:"it",e:"🇮🇹"},{c:"ru",e:"🇷🇺"},{c:"gb",e:"🇬🇧"},{c:"uk",e:"🇬🇧"},{c:"de",e:"🇩🇪"}
+  ],
+  "Simboli": [
+    {c:"one",e:"1️⃣"},{c:"two",e:"2️⃣"},{c:"three",e:"3️⃣"},{c:"four",e:"4️⃣"},{c:"five",e:"5️⃣"},{c:"six",e:"6️⃣"},{c:"seven",e:"7️⃣"},{c:"eight",e:"8️⃣"},{c:"nine",e:"9️⃣"},{c:"keycap_ten",e:"🔟"},{c:"1234",e:"🔢"},{c:"zero",e:"0️⃣"},{c:"hash",e:"#️⃣"},{c:"symbols",e:"🔣"},
+    {c:"arrow_backward",e:"◀️"},{c:"arrow_down",e:"⬇️"},{c:"arrow_forward",e:"▶️"},{c:"arrow_left",e:"⬅️"},{c:"capital_abcd",e:"🔠"},{c:"abcd",e:"🔡"},{c:"abc",e:"🔤"},{c:"arrow_lower_left",e:"↙️"},{c:"arrow_lower_right",e:"↘️"},{c:"arrow_right",e:"➡️"},{c:"arrow_up",e:"⬆️"},{c:"arrow_upper_left",e:"↖️"},{c:"arrow_upper_right",e:"↗️"},{c:"arrow_double_down",e:"⏬"},{c:"arrow_double_up",e:"⏫"},{c:"arrow_down_small",e:"🔽"},{c:"arrow_heading_down",e:"⤵️"},{c:"arrow_heading_up",e:"⤴️"},{c:"leftwards_arrow_with_hook",e:"↩️"},{c:"arrow_right_hook",e:"↪️"},{c:"left_right_arrow",e:"↔️"},{c:"arrow_up_down",e:"↕️"},{c:"arrow_up_small",e:"🔼"},{c:"arrows_clockwise",e:"🔃"},{c:"arrows_counterclockwise",e:"🔄"},{c:"rewind",e:"⏪"},{c:"fast_forward",e:"⏩"},{c:"twisted_rightwards_arrows",e:"🔀"},{c:"repeat",e:"🔁"},{c:"repeat_one",e:"🔂"},
+    {c:"information_source",e:"ℹ️"},{c:"ok",e:"🆗"},{c:"new",e:"🆕"},{c:"top",e:"🔝"},{c:"up",e:"🆙"},{c:"cool",e:"🆒"},{c:"free",e:"🆓"},{c:"ng",e:"🆖"},{c:"cinema",e:"🎦"},{c:"koko",e:"🈁"},{c:"signal_strength",e:"📶"},
+    {c:"restroom",e:"🚻"},{c:"mens",e:"🚹"},{c:"womens",e:"🚺"},{c:"baby_symbol",e:"🚼"},{c:"no_smoking",e:"🚭"},{c:"parking",e:"🅿️"},{c:"wheelchair",e:"♿"},{c:"metro",e:"🚇"},{c:"baggage_claim",e:"🛄"},{c:"wc",e:"🚾"},{c:"potable_water",e:"🚰"},{c:"put_litter_in_its_place",e:"🚮"},{c:"passport_control",e:"🛂"},{c:"left_luggage",e:"🛅"},{c:"customs",e:"🛃"},
+    {c:"cl",e:"🆑"},{c:"sos",e:"🆘"},{c:"id",e:"🆔"},{c:"no_entry_sign",e:"🚫"},{c:"underage",e:"🔞"},{c:"no_mobile_phones",e:"📵"},{c:"do_not_litter",e:"🚯"},{c:"non-potable_water",e:"🚱"},{c:"no_bicycles",e:"🚳"},{c:"no_pedestrians",e:"🚷"},{c:"children_crossing",e:"🚸"},{c:"no_entry",e:"⛔"},
+    {c:"eight_spoked_asterisk",e:"✳️"},{c:"eight_pointed_black_star",e:"✴️"},{c:"heart_decoration",e:"💟"},{c:"vs",e:"🆚"},{c:"vibration_mode",e:"📳"},{c:"mobile_phone_off",e:"📴"},{c:"chart",e:"💹"},{c:"currency_exchange",e:"💱"},
+    {c:"aries",e:"♈"},{c:"taurus",e:"♉"},{c:"gemini",e:"♊"},{c:"cancer",e:"♋"},{c:"leo",e:"♌"},{c:"virgo",e:"♍"},{c:"libra",e:"♎"},{c:"scorpius",e:"♏"},{c:"sagittarius",e:"♐"},{c:"capricorn",e:"♑"},{c:"aquarius",e:"♒"},{c:"pisces",e:"♓"},{c:"ophiuchus",e:"⛎"},{c:"six_pointed_star",e:"🔯"},
+    {c:"a",e:"🅰️"},{c:"b",e:"🅱️"},{c:"ab",e:"🆎"},{c:"o2",e:"🅾️"},{c:"diamond_shape_with_a_dot_inside",e:"💠"},{c:"recycle",e:"♻️"},{c:"end",e:"🔚"},{c:"on",e:"🔛"},{c:"soon",e:"🔜"},
+    {c:"clock1",e:"🕐"},{c:"clock2",e:"🕑"},{c:"clock3",e:"🕒"},{c:"clock4",e:"🕓"},{c:"clock5",e:"🕔"},{c:"clock6",e:"🕕"},{c:"clock7",e:"🕖"},{c:"clock8",e:"🕗"},{c:"clock9",e:"🕘"},{c:"clock10",e:"🕙"},{c:"clock11",e:"🕚"},{c:"clock12",e:"🕛"},
+    {c:"heavy_dollar_sign",e:"💲"},{c:"copyright",e:"©️"},{c:"registered",e:"®️"},{c:"tm",e:"™️"},{c:"x",e:"❌"},{c:"heavy_exclamation_mark",e:"❗"},{c:"bangbang",e:"‼️"},{c:"interrobang",e:"⁉️"},{c:"o",e:"⭕"},{c:"heavy_multiplication_x",e:"✖️"},{c:"heavy_plus_sign",e:"➕"},{c:"heavy_minus_sign",e:"➖"},{c:"heavy_division_sign",e:"➗"},{c:"white_flower",e:"💮"},{c:"100",e:"💯"},{c:"heavy_check_mark",e:"✔️"},{c:"ballot_box_with_check",e:"☑️"},{c:"radio_button",e:"🔘"},{c:"link",e:"🔗"},{c:"curly_loop",e:"➰"},{c:"wavy_dash",e:"〰️"},{c:"part_alternation_mark",e:"〽️"},{c:"trident",e:"🔱"},
+    {c:"black_square",e:"◼️"},{c:"white_square",e:"◻️"},{c:"white_check_mark",e:"✅"},{c:"black_square_button",e:"🔲"},{c:"white_square_button",e:"🔳"},{c:"black_circle",e:"⚫"},{c:"white_circle",e:"⚪"},{c:"red_circle",e:"🔴"},{c:"large_blue_circle",e:"🔵"},{c:"large_blue_diamond",e:"🔷"},{c:"large_orange_diamond",e:"🔶"},{c:"small_blue_diamond",e:"🔹"},{c:"small_orange_diamond",e:"🔸"},{c:"small_red_triangle",e:"🔺"},{c:"small_red_triangle_down",e:"🔻"},{c:"negative_squared_cross_mark",e:"❎"}
+  ]
+};
+
+const EMOJI_CATEGORIES = Object.keys(EMOJI_DATA);
+const EMOJI_CAT_ICON = { "Persone":"😀", "Natura":"🐶", "Oggetti":"📚", "Luoghi":"🏠", "Simboli":"🔢" };
+
+/* Indice di ricerca: shortcode → entry */
+const EMOJI_SEARCH_INDEX = (() => {
+  const list = [];
+  for (const cat of EMOJI_CATEGORIES) {
+    for (const item of EMOJI_DATA[cat]) list.push({...item, cat});
+  }
+  return list;
+})();
+
+/* ════════════════════════════════════════════════════════════
+   VOCABOLARIO CAA ITALIANO (curato, espandibile con arasaac_fetch.py)
+   ════════════════════════════════════════════════════════════ */
+const CAA_VOCAB = [{"id":"io","parola":"Io","fitz":"grigio","emoji":"👤","shortcode":"bust_in_silhouette","alternative":["🙋","☝️","🫵"],"categoria":"pronome"},{"id":"tu","parola":"Tu","fitz":"grigio","emoji":"👉","shortcode":"point_right","alternative":["🫵","👤","🤝"],"categoria":"pronome"},{"id":"lui","parola":"Lui","fitz":"grigio","emoji":"👨","shortcode":"man","alternative":["👤","🧑","👦"],"categoria":"pronome"},{"id":"lei","parola":"Lei","fitz":"grigio","emoji":"👩","shortcode":"woman","alternative":["👤","🧑","👧"],"categoria":"pronome"},{"id":"noi","parola":"Noi","fitz":"grigio","emoji":"👥","shortcode":"busts_in_silhouette","alternative":["👫","👬","👭"],"categoria":"pronome"},{"id":"voi","parola":"Voi","fitz":"grigio","emoji":"👥","shortcode":"busts_in_silhouette","alternative":["👫","👬","👭"],"categoria":"pronome"},{"id":"loro","parola":"Loro","fitz":"grigio","emoji":"👥","shortcode":"busts_in_silhouette","alternative":["👨‍👩‍👧","👪","👯"],"categoria":"pronome"},{"id":"mio","parola":"Mio","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["👤","☝️","🫵"],"categoria":"possessivo"},{"id":"tuo","parola":"Tuo","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["👉","☝️","🤝"],"categoria":"possessivo"},{"id":"suo","parola":"Suo","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["👤","👨","👩"],"categoria":"possessivo"},{"id":"questo","parola":"Questo","fitz":"grigio","emoji":"👆","shortcode":"point_up_2","alternative":["☝️","👉","📍"],"categoria":"dimostrativo"},{"id":"quello","parola":"Quello","fitz":"grigio","emoji":"👉","shortcode":"point_right","alternative":["👆","📍","➡️"],"categoria":"dimostrativo"},{"id":"il","parola":"Il","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["📌","➡️","📎"],"categoria":"articolo"},{"id":"la","parola":"La","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["📌","➡️","📎"],"categoria":"articolo"},{"id":"un","parola":"Un","fitz":"grigio","emoji":"1️⃣","shortcode":"one","alternative":["☝️","📌","📎"],"categoria":"articolo"},{"id":"una","parola":"Una","fitz":"grigio","emoji":"1️⃣","shortcode":"one","alternative":["☝️","📌","📎"],"categoria":"articolo"},{"id":"di","parola":"Di","fitz":"grigio","emoji":null,"shortcode":null,"alternative":["🔗","📎","➡️"],"categoria":"preposizione"},{"id":"a","parola":"A","fitz":"grigio","emoji":"➡️","shortcode":"arrow_right","alternative":["📍","📎","➕"],"categoria":"preposizione"},{"id":"da","parola":"Da","fitz":"grigio","emoji":"⬅️","shortcode":"arrow_left","alternative":["📍","📎","↩️"],"categoria":"preposizione"},{"id":"in","parola":"In","fitz":"grigio","emoji":"📥","shortcode":"inbox_tray","alternative":["📦","🏠","➡️"],"categoria":"preposizione"},{"id":"con","parola":"Con","fitz":"grigio","emoji":"🤝","shortcode":"handshake","alternative":["👫","➕","🔗"],"categoria":"preposizione"},{"id":"per","parola":"Per","fitz":"grigio","emoji":"🎯","shortcode":"dart","alternative":["➡️","🎁","🔗"],"categoria":"preposizione"},{"id":"su","parola":"Su","fitz":"grigio","emoji":"⬆️","shortcode":"arrow_up","alternative":["🔝","📍","☝️"],"categoria":"preposizione"},{"id":"giù","parola":"Giù","fitz":"grigio","emoji":"⬇️","shortcode":"arrow_down","alternative":["🔽","📍","👇"],"categoria":"preposizione"},{"id":"mamma","parola":"Mamma","fitz":"giallo","emoji":"👩","shortcode":"woman","alternative":["👵","🤱","👩‍👧"],"categoria":"famiglia"},{"id":"papà","parola":"Papà","fitz":"giallo","emoji":"👨","shortcode":"man","alternative":["👴","👨‍👧","🧔"],"categoria":"famiglia"},{"id":"bambino","parola":"Bambino","fitz":"giallo","emoji":"👦","shortcode":"boy","alternative":["👶","🧒","🧑"],"categoria":"famiglia"},{"id":"bambina","parola":"Bambina","fitz":"giallo","emoji":"👧","shortcode":"girl","alternative":["👶","🧒","🧑"],"categoria":"famiglia"},{"id":"fratello","parola":"Fratello","fitz":"giallo","emoji":"👬","shortcode":"two_men_holding_hands","alternative":["👦","👨","🧑"],"categoria":"famiglia"},{"id":"sorella","parola":"Sorella","fitz":"giallo","emoji":"👭","shortcode":"two_women_holding_hands","alternative":["👧","👩","🧑"],"categoria":"famiglia"},{"id":"nonno","parola":"Nonno","fitz":"giallo","emoji":"👴","shortcode":"older_man","alternative":["👨","🧓","🧔"],"categoria":"famiglia"},{"id":"nonna","parola":"Nonna","fitz":"giallo","emoji":"👵","shortcode":"older_woman","alternative":["👩","🧓","👴"],"categoria":"famiglia"},{"id":"zio","parola":"Zio","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨","🧑","👴"],"categoria":"famiglia"},{"id":"zia","parola":"Zia","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👩","🧑","👵"],"categoria":"famiglia"},{"id":"famiglia","parola":"Famiglia","fitz":"giallo","emoji":"👪","shortcode":"family","alternative":["👨‍👩‍👧","🏠","👥"],"categoria":"famiglia"},{"id":"amico","parola":"Amico","fitz":"giallo","emoji":"🤝","shortcode":"handshake","alternative":["👫","🧑‍🤝‍🧑","💑"],"categoria":"persone"},{"id":"amica","parola":"Amica","fitz":"giallo","emoji":"🤝","shortcode":"handshake","alternative":["👭","🧑‍🤝‍🧑","💑"],"categoria":"persone"},{"id":"persona","parola":"Persona","fitz":"giallo","emoji":"👤","shortcode":"bust_in_silhouette","alternative":["🧑","👥","🗣️"],"categoria":"persone"},{"id":"maestro","parola":"Maestro","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍🏫","👨","📚"],"categoria":"persone"},{"id":"maestra","parola":"Maestra","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👩‍🏫","👩","📚"],"categoria":"persone"},{"id":"dottore","parola":"Dottore","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍⚕️","🩺","🏥"],"categoria":"persone"},{"id":"dottoressa","parola":"Dottoressa","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👩‍⚕️","🩺","🏥"],"categoria":"persone"},{"id":"infermiere","parola":"Infermiere","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍⚕️","💉","🏥"],"categoria":"persone"},{"id":"poliziotto","parola":"Poliziotto","fitz":"giallo","emoji":"👮","shortcode":"cop","alternative":["🚓","🚔","🚨"],"categoria":"persone"},{"id":"vigile_fuoco","parola":"Vigile del fuoco","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍🚒","🚒","🔥"],"categoria":"persone"},{"id":"cuoco","parola":"Cuoco","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍🍳","🍳","🍴"],"categoria":"persone"},{"id":"contadino","parola":"Contadino","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👨‍🌾","🚜","🌾"],"categoria":"persone"},{"id":"cane","parola":"Cane","fitz":"giallo","emoji":"🐶","shortcode":"dog","alternative":["🐕","🐩","🦮"],"categoria":"animale"},{"id":"gatto","parola":"Gatto","fitz":"giallo","emoji":"🐱","shortcode":"cat","alternative":["🐈","🐈‍⬛","😺"],"categoria":"animale"},{"id":"uccello","parola":"Uccello","fitz":"giallo","emoji":"🐦","shortcode":"bird","alternative":["🦜","🦢","🐤"],"categoria":"animale"},{"id":"pesce","parola":"Pesce","fitz":"giallo","emoji":"🐟","shortcode":"fish","alternative":["🐠","🐡","🦈"],"categoria":"animale"},{"id":"cavallo","parola":"Cavallo","fitz":"giallo","emoji":"🐴","shortcode":"horse","alternative":["🐎","🦓","🦄"],"categoria":"animale"},{"id":"mucca","parola":"Mucca","fitz":"giallo","emoji":"🐮","shortcode":"cow","alternative":["🐄","🐂","🐃"],"categoria":"animale"},{"id":"pecora","parola":"Pecora","fitz":"giallo","emoji":"🐑","shortcode":"sheep","alternative":["🐏","🐐","🦙"],"categoria":"animale"},{"id":"maiale","parola":"Maiale","fitz":"giallo","emoji":"🐷","shortcode":"pig","alternative":["🐖","🐗","🐽"],"categoria":"animale"},{"id":"gallina","parola":"Gallina","fitz":"giallo","emoji":"🐔","shortcode":"chicken","alternative":["🐓","🐤","🥚"],"categoria":"animale"},{"id":"coniglio","parola":"Coniglio","fitz":"giallo","emoji":"🐰","shortcode":"rabbit","alternative":["🐇","🥕","🐭"],"categoria":"animale"},{"id":"elefante","parola":"Elefante","fitz":"giallo","emoji":"🐘","shortcode":"elephant","alternative":["🦣","🦏","🦒"],"categoria":"animale"},{"id":"leone","parola":"Leone","fitz":"giallo","emoji":"🦁","shortcode":null,"alternative":["🐯","🐅","🐆"],"categoria":"animale"},{"id":"tigre","parola":"Tigre","fitz":"giallo","emoji":"🐯","shortcode":"tiger","alternative":["🐅","🐆","🦁"],"categoria":"animale"},{"id":"scimmia","parola":"Scimmia","fitz":"giallo","emoji":"🐵","shortcode":"monkey_face","alternative":["🐒","🦍","🦧"],"categoria":"animale"},{"id":"orso","parola":"Orso","fitz":"giallo","emoji":"🐻","shortcode":"bear","alternative":["🐼","🐻‍❄️","🦝"],"categoria":"animale"},{"id":"topo","parola":"Topo","fitz":"giallo","emoji":"🐭","shortcode":"mouse","alternative":["🐁","🐀","🐹"],"categoria":"animale"},{"id":"farfalla","parola":"Farfalla","fitz":"giallo","emoji":"🦋","shortcode":null,"alternative":["🐛","🐝","🌸"],"categoria":"animale"},{"id":"ape","parola":"Ape","fitz":"giallo","emoji":"🐝","shortcode":"honeybee","alternative":["🍯","🌼","🦋"],"categoria":"animale"},{"id":"serpente","parola":"Serpente","fitz":"giallo","emoji":"🐍","shortcode":"snake","alternative":["🦎","🐉","🥚"],"categoria":"animale"},{"id":"tartaruga","parola":"Tartaruga","fitz":"giallo","emoji":"🐢","shortcode":"turtle","alternative":["🐌","🦎","🐊"],"categoria":"animale"},{"id":"pane","parola":"Pane","fitz":"giallo","emoji":"🍞","shortcode":"bread","alternative":["🥖","🥯","🥪"],"categoria":"cibo"},{"id":"pasta","parola":"Pasta","fitz":"giallo","emoji":"🍝","shortcode":"spaghetti","alternative":["🍜","🍲","🧆"],"categoria":"cibo"},{"id":"pizza","parola":"Pizza","fitz":"giallo","emoji":"🍕","shortcode":"pizza","alternative":["🧀","🍅","🥖"],"categoria":"cibo"},{"id":"riso","parola":"Riso","fitz":"giallo","emoji":"🍚","shortcode":"rice","alternative":["🍙","🍘","🥣"],"categoria":"cibo"},{"id":"carne","parola":"Carne","fitz":"giallo","emoji":"🍖","shortcode":"meat_on_bone","alternative":["🥩","🍗","🌭"],"categoria":"cibo"},{"id":"formaggio","parola":"Formaggio","fitz":"giallo","emoji":"🧀","shortcode":null,"alternative":["🥛","🍞","🥨"],"categoria":"cibo"},{"id":"latte","parola":"Latte","fitz":"giallo","emoji":"🥛","shortcode":null,"alternative":["🍼","🐮","🥣"],"categoria":"cibo"},{"id":"acqua","parola":"Acqua","fitz":"giallo","emoji":"💧","shortcode":"droplet","alternative":["🚰","🥤","🌊"],"categoria":"cibo"},{"id":"succo","parola":"Succo","fitz":"giallo","emoji":"🧃","shortcode":null,"alternative":["🥤","🍹","🍊"],"categoria":"cibo"},{"id":"tè","parola":"Tè","fitz":"giallo","emoji":"🍵","shortcode":"tea","alternative":["☕","🫖","🍃"],"categoria":"cibo"},{"id":"caffè","parola":"Caffè","fitz":"giallo","emoji":"☕","shortcode":"coffee","alternative":["🫖","🍵","🥤"],"categoria":"cibo"},{"id":"vino","parola":"Vino","fitz":"giallo","emoji":"🍷","shortcode":"wine_glass","alternative":["🍇","🍾","🍻"],"categoria":"cibo"},{"id":"birra","parola":"Birra","fitz":"giallo","emoji":"🍺","shortcode":"beer","alternative":["🍻","🍷","🌾"],"categoria":"cibo"},{"id":"mela","parola":"Mela","fitz":"giallo","emoji":"🍎","shortcode":"apple","alternative":["🍏","🍊","🍑"],"categoria":"cibo"},{"id":"banana","parola":"Banana","fitz":"giallo","emoji":"🍌","shortcode":"banana","alternative":["🍍","🥭","🍈"],"categoria":"cibo"},{"id":"arancia","parola":"Arancia","fitz":"giallo","emoji":"🍊","shortcode":"tangerine","alternative":["🍋","🍑","🥭"],"categoria":"cibo"},{"id":"uva","parola":"Uva","fitz":"giallo","emoji":"🍇","shortcode":"grapes","alternative":["🍷","🫐","🍑"],"categoria":"cibo"},{"id":"fragola","parola":"Fragola","fitz":"giallo","emoji":"🍓","shortcode":"strawberry","alternative":["🫐","🍒","🥧"],"categoria":"cibo"},{"id":"ciliegia","parola":"Ciliegia","fitz":"giallo","emoji":"🍒","shortcode":"cherries","alternative":["🍓","🫐","🌸"],"categoria":"cibo"},{"id":"limone","parola":"Limone","fitz":"giallo","emoji":"🍋","shortcode":"lemon","alternative":["🍊","🥝","🥭"],"categoria":"cibo"},{"id":"pomodoro","parola":"Pomodoro","fitz":"giallo","emoji":"🍅","shortcode":"tomato","alternative":["🍆","🌶️","🧄"],"categoria":"cibo"},{"id":"carota","parola":"Carota","fitz":"giallo","emoji":"🥕","shortcode":null,"alternative":["🌽","🥔","🥬"],"categoria":"cibo"},{"id":"patata","parola":"Patata","fitz":"giallo","emoji":"🥔","shortcode":null,"alternative":["🍠","🍟","🥕"],"categoria":"cibo"},{"id":"uovo","parola":"Uovo","fitz":"giallo","emoji":"🥚","shortcode":"egg","alternative":["🍳","🐔","🐣"],"categoria":"cibo"},{"id":"gelato","parola":"Gelato","fitz":"giallo","emoji":"🍨","shortcode":"ice_cream","alternative":["🍦","🍧","🧁"],"categoria":"cibo"},{"id":"torta","parola":"Torta","fitz":"giallo","emoji":"🍰","shortcode":"cake","alternative":["🎂","🧁","🥧"],"categoria":"cibo"},{"id":"biscotto","parola":"Biscotto","fitz":"giallo","emoji":"🍪","shortcode":"cookie","alternative":["🥨","🥯","🍩"],"categoria":"cibo"},{"id":"cioccolato","parola":"Cioccolato","fitz":"giallo","emoji":"🍫","shortcode":"chocolate_bar","alternative":["🍬","🍩","🎂"],"categoria":"cibo"},{"id":"caramella","parola":"Caramella","fitz":"giallo","emoji":"🍬","shortcode":"candy","alternative":["🍭","🍫","🧁"],"categoria":"cibo"},{"id":"hamburger","parola":"Hamburger","fitz":"giallo","emoji":"🍔","shortcode":"hamburger","alternative":["🌭","🥪","🍟"],"categoria":"cibo"},{"id":"patatine","parola":"Patatine","fitz":"giallo","emoji":"🍟","shortcode":"fries","alternative":["🍔","🥔","🥨"],"categoria":"cibo"},{"id":"casa","parola":"Casa","fitz":"giallo","emoji":"🏠","shortcode":"house","alternative":["🏡","🏘️","🛖"],"categoria":"luogo"},{"id":"scuola","parola":"Scuola","fitz":"giallo","emoji":"🏫","shortcode":"school","alternative":["📚","🎒","🖊️"],"categoria":"luogo"},{"id":"ospedale","parola":"Ospedale","fitz":"giallo","emoji":"🏥","shortcode":"hospital","alternative":["💊","🩺","🚑"],"categoria":"luogo"},{"id":"chiesa","parola":"Chiesa","fitz":"giallo","emoji":"⛪","shortcode":"church","alternative":["✝️","🕊️","🙏"],"categoria":"luogo"},{"id":"parco","parola":"Parco","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🌳","🌷","🏞️"],"categoria":"luogo"},{"id":"giardino","parola":"Giardino","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🌷","🌳","🏡"],"categoria":"luogo"},{"id":"negozio","parola":"Negozio","fitz":"giallo","emoji":"🏪","shortcode":"convenience_store","alternative":["🛒","🛍️","💳"],"categoria":"luogo"},{"id":"banca","parola":"Banca","fitz":"giallo","emoji":"🏦","shortcode":"bank","alternative":["💰","💳","💵"],"categoria":"luogo"},{"id":"ristorante","parola":"Ristorante","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🍽️","🍴","🍕"],"categoria":"luogo"},{"id":"bar","parola":"Bar","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["☕","🍻","🥤"],"categoria":"luogo"},{"id":"cinema","parola":"Cinema","fitz":"giallo","emoji":"🎦","shortcode":"cinema","alternative":["🎬","🍿","🎥"],"categoria":"luogo"},{"id":"biblioteca","parola":"Biblioteca","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["📚","📖","🏛️"],"categoria":"luogo"},{"id":"museo","parola":"Museo","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🏛️","🖼️","🗿"],"categoria":"luogo"},{"id":"stadio","parola":"Stadio","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["⚽","🏟️","🏆"],"categoria":"luogo"},{"id":"spiaggia","parola":"Spiaggia","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🏖️","🌊","⛱️"],"categoria":"luogo"},{"id":"montagna","parola":"Montagna","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🏔️","⛰️","🗻"],"categoria":"luogo"},{"id":"camera","parola":"Camera","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🛏️","🚪","🏠"],"categoria":"luogo"},{"id":"cucina","parola":"Cucina","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🍳","🍽️","🔪"],"categoria":"luogo"},{"id":"bagno","parola":"Bagno","fitz":"giallo","emoji":"🛁","shortcode":"bathtub","alternative":["🚽","🚿","🧼"],"categoria":"luogo"},{"id":"salotto","parola":"Salotto","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🛋️","📺","🪑"],"categoria":"luogo"},{"id":"libro","parola":"Libro","fitz":"giallo","emoji":"📚","shortcode":"books","alternative":["📖","📕","📗"],"categoria":"oggetto"},{"id":"quaderno","parola":"Quaderno","fitz":"giallo","emoji":"📓","shortcode":"notebook","alternative":["📒","📔","📝"],"categoria":"oggetto"},{"id":"penna","parola":"Penna","fitz":"giallo","emoji":"🖊️","shortcode":null,"alternative":["✒️","✏️","📝"],"categoria":"oggetto"},{"id":"matita","parola":"Matita","fitz":"giallo","emoji":"✏️","shortcode":"pencil2","alternative":["🖊️","📝","🖍️"],"categoria":"oggetto"},{"id":"gomma","parola":"Gomma","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["📝","✏️","🧽"],"categoria":"oggetto"},{"id":"zaino","parola":"Zaino","fitz":"giallo","emoji":"🎒","shortcode":"school_satchel","alternative":["👜","🎓","📚"],"categoria":"oggetto"},{"id":"lavagna","parola":"Lavagna","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["📋","✏️","🧮"],"categoria":"oggetto"},{"id":"tavolo","parola":"Tavolo","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🍽️","🪑","📋"],"categoria":"oggetto"},{"id":"sedia","parola":"Sedia","fitz":"giallo","emoji":"🪑","shortcode":null,"alternative":["💺","🛋️","🚽"],"categoria":"oggetto"},{"id":"letto","parola":"Letto","fitz":"giallo","emoji":"🛏️","shortcode":null,"alternative":["💤","😴","🛋️"],"categoria":"oggetto"},{"id":"porta","parola":"Porta","fitz":"giallo","emoji":"🚪","shortcode":"door","alternative":["🔑","🚷","🏠"],"categoria":"oggetto"},{"id":"finestra","parola":"Finestra","fitz":"giallo","emoji":"🪟","shortcode":null,"alternative":["🏠","🌳","☀️"],"categoria":"oggetto"},{"id":"chiave","parola":"Chiave","fitz":"giallo","emoji":"🔑","shortcode":"key","alternative":["🗝️","🔐","🚪"],"categoria":"oggetto"},{"id":"televisione","parola":"Televisione","fitz":"giallo","emoji":"📺","shortcode":"tv","alternative":["🎥","📻","🖥️"],"categoria":"oggetto"},{"id":"telefono","parola":"Telefono","fitz":"giallo","emoji":"📱","shortcode":"iphone","alternative":["☎️","📞","📲"],"categoria":"oggetto"},{"id":"computer","parola":"Computer","fitz":"giallo","emoji":"💻","shortcode":"computer","alternative":["🖥️","⌨️","🖱️"],"categoria":"oggetto"},{"id":"orologio","parola":"Orologio","fitz":"giallo","emoji":"⏰","shortcode":"alarm_clock","alternative":["⌚","🕐","⏱️"],"categoria":"oggetto"},{"id":"borsa","parola":"Borsa","fitz":"giallo","emoji":"👜","shortcode":"handbag","alternative":["👛","👝","💼"],"categoria":"oggetto"},{"id":"valigia","parola":"Valigia","fitz":"giallo","emoji":"💼","shortcode":"briefcase","alternative":["👜","🧳","🛄"],"categoria":"oggetto"},{"id":"palla","parola":"Palla","fitz":"giallo","emoji":"⚽","shortcode":"soccer","alternative":["🏀","🎾","🏐"],"categoria":"oggetto"},{"id":"giocattolo","parola":"Giocattolo","fitz":"giallo","emoji":"🧸","shortcode":null,"alternative":["🎮","🎲","🪀"],"categoria":"oggetto"},{"id":"musica","parola":"Musica","fitz":"giallo","emoji":"🎵","shortcode":"musical_note","alternative":["🎶","🎼","🎤"],"categoria":"oggetto"},{"id":"film","parola":"Film","fitz":"giallo","emoji":"🎬","shortcode":"clapper","alternative":["🎥","🎦","📺"],"categoria":"oggetto"},{"id":"foto","parola":"Foto","fitz":"giallo","emoji":"📷","shortcode":"camera","alternative":["📸","🖼️","🎞️"],"categoria":"oggetto"},{"id":"regalo","parola":"Regalo","fitz":"giallo","emoji":"🎁","shortcode":"gift","alternative":["🎀","🎉","💝"],"categoria":"oggetto"},{"id":"soldi","parola":"Soldi","fitz":"giallo","emoji":"💰","shortcode":"moneybag","alternative":["💵","💶","💳"],"categoria":"oggetto"},{"id":"maglia","parola":"Maglia","fitz":"giallo","emoji":"👕","shortcode":"shirt","alternative":["👚","🧥","👔"],"categoria":"vestiti"},{"id":"pantaloni","parola":"Pantaloni","fitz":"giallo","emoji":"👖","shortcode":"jeans","alternative":["🩳","👔","👘"],"categoria":"vestiti"},{"id":"scarpa","parola":"Scarpa","fitz":"giallo","emoji":"👟","shortcode":null,"alternative":["👞","👠","👢"],"categoria":"vestiti"},{"id":"calza","parola":"Calza","fitz":"giallo","emoji":"🧦","shortcode":null,"alternative":["👟","👞","🩴"],"categoria":"vestiti"},{"id":"cappello","parola":"Cappello","fitz":"giallo","emoji":"🎩","shortcode":"tophat","alternative":["👒","🧢","👑"],"categoria":"vestiti"},{"id":"sciarpa","parola":"Sciarpa","fitz":"giallo","emoji":"🧣","shortcode":null,"alternative":["🧥","🧤","👔"],"categoria":"vestiti"},{"id":"guanti","parola":"Guanti","fitz":"giallo","emoji":"🧤","shortcode":null,"alternative":["🧣","🧥","✋"],"categoria":"vestiti"},{"id":"giacca","parola":"Giacca","fitz":"giallo","emoji":"🧥","shortcode":null,"alternative":["👔","👕","🥼"],"categoria":"vestiti"},{"id":"vestito","parola":"Vestito","fitz":"giallo","emoji":"👗","shortcode":"dress","alternative":["👘","👚","👔"],"categoria":"vestiti"},{"id":"occhiali","parola":"Occhiali","fitz":"giallo","emoji":"👓","shortcode":"eyeglasses","alternative":["🕶️","👁️","🥽"],"categoria":"vestiti"},{"id":"macchina","parola":"Macchina","fitz":"giallo","emoji":"🚗","shortcode":"car","alternative":["🚙","🚘","🏎️"],"categoria":"trasporto"},{"id":"autobus","parola":"Autobus","fitz":"giallo","emoji":"🚌","shortcode":"bus","alternative":["🚍","🚐","🚎"],"categoria":"trasporto"},{"id":"treno","parola":"Treno","fitz":"giallo","emoji":"🚆","shortcode":"train2","alternative":["🚄","🚂","🚉"],"categoria":"trasporto"},{"id":"bicicletta","parola":"Bicicletta","fitz":"giallo","emoji":"🚲","shortcode":"bike","alternative":["🛴","🛵","🏍️"],"categoria":"trasporto"},{"id":"aereo","parola":"Aereo","fitz":"giallo","emoji":"✈️","shortcode":"airplane","alternative":["🛩️","🛫","🛬"],"categoria":"trasporto"},{"id":"nave","parola":"Nave","fitz":"giallo","emoji":"🚢","shortcode":"ship","alternative":["⛴️","⛵","🛥️"],"categoria":"trasporto"},{"id":"taxi","parola":"Taxi","fitz":"giallo","emoji":"🚕","shortcode":"taxi","alternative":["🚖","🚗","🚙"],"categoria":"trasporto"},{"id":"camion","parola":"Camion","fitz":"giallo","emoji":"🚚","shortcode":"truck","alternative":["🚛","🚜","🚐"],"categoria":"trasporto"},{"id":"moto","parola":"Moto","fitz":"giallo","emoji":"🏍️","shortcode":null,"alternative":["🛵","🚲","🏎️"],"categoria":"trasporto"},{"id":"sole","parola":"Sole","fitz":"giallo","emoji":"☀️","shortcode":"sunny","alternative":["🌞","🌅","🌤️"],"categoria":"natura"},{"id":"luna","parola":"Luna","fitz":"giallo","emoji":"🌙","shortcode":null,"alternative":["🌜","🌝","✨"],"categoria":"natura"},{"id":"stella","parola":"Stella","fitz":"giallo","emoji":"⭐","shortcode":"star","alternative":["🌟","✨","💫"],"categoria":"natura"},{"id":"nuvola","parola":"Nuvola","fitz":"giallo","emoji":"☁️","shortcode":"cloud","alternative":["⛅","🌤️","🌥️"],"categoria":"natura"},{"id":"pioggia","parola":"Pioggia","fitz":"giallo","emoji":"🌧️","shortcode":null,"alternative":["☔","💧","⛈️"],"categoria":"natura"},{"id":"neve","parola":"Neve","fitz":"giallo","emoji":"❄️","shortcode":"snowflake","alternative":["⛄","🌨️","🏔️"],"categoria":"natura"},{"id":"vento","parola":"Vento","fitz":"giallo","emoji":"💨","shortcode":"dash","alternative":["🌬️","🍃","🌪️"],"categoria":"natura"},{"id":"fuoco","parola":"Fuoco","fitz":"giallo","emoji":"🔥","shortcode":"fire","alternative":["🕯️","🚒","💥"],"categoria":"natura"},{"id":"albero","parola":"Albero","fitz":"giallo","emoji":"🌳","shortcode":"deciduous_tree","alternative":["🌲","🌴","🌱"],"categoria":"natura"},{"id":"fiore","parola":"Fiore","fitz":"giallo","emoji":"🌸","shortcode":"cherry_blossom","alternative":["🌹","🌻","🌷"],"categoria":"natura"},{"id":"erba","parola":"Erba","fitz":"giallo","emoji":"🌿","shortcode":"herb","alternative":["🍃","🌱","🌾"],"categoria":"natura"},{"id":"mare","parola":"Mare","fitz":"giallo","emoji":"🌊","shortcode":"ocean","alternative":["🏖️","⛵","🐠"],"categoria":"natura"},{"id":"fiume","parola":"Fiume","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🌊","🏞️","💧"],"categoria":"natura"},{"id":"foresta","parola":"Foresta","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🌲","🌳","🏕️"],"categoria":"natura"},{"id":"cielo","parola":"Cielo","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["☁️","🌤️","🌌"],"categoria":"natura"},{"id":"terra","parola":"Terra","fitz":"giallo","emoji":"🌍","shortcode":"earth_africa","alternative":["🌎","🌏","🌐"],"categoria":"natura"},{"id":"testa","parola":"Testa","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["👤","🧠","💆"],"categoria":"corpo"},{"id":"occhio","parola":"Occhio","fitz":"giallo","emoji":"👁️","shortcode":null,"alternative":["👀","👓","🔍"],"categoria":"corpo"},{"id":"occhi","parola":"Occhi","fitz":"giallo","emoji":"👀","shortcode":"eyes","alternative":["👁️","👓","🔍"],"categoria":"corpo"},{"id":"naso","parola":"Naso","fitz":"giallo","emoji":"👃","shortcode":"nose","alternative":["🤧","😤","💨"],"categoria":"corpo"},{"id":"bocca","parola":"Bocca","fitz":"giallo","emoji":"👄","shortcode":"lips","alternative":["💋","👅","🦷"],"categoria":"corpo"},{"id":"orecchio","parola":"Orecchio","fitz":"giallo","emoji":"👂","shortcode":"ear","alternative":["👂🏻","🔊","🎧"],"categoria":"corpo"},{"id":"capelli","parola":"Capelli","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["💇","👱","🧖"],"categoria":"corpo"},{"id":"mano","parola":"Mano","fitz":"giallo","emoji":"✋","shortcode":"hand","alternative":["👋","🤚","✊"],"categoria":"corpo"},{"id":"piede","parola":"Piede","fitz":"giallo","emoji":"🦶","shortcode":null,"alternative":["👣","🚶","👟"],"categoria":"corpo"},{"id":"braccio","parola":"Braccio","fitz":"giallo","emoji":"💪","shortcode":"muscle","alternative":["🤚","👐","🦾"],"categoria":"corpo"},{"id":"gamba","parola":"Gamba","fitz":"giallo","emoji":"🦵","shortcode":null,"alternative":["🚶","👟","🦶"],"categoria":"corpo"},{"id":"cuore","parola":"Cuore","fitz":"giallo","emoji":"❤️","shortcode":"heart","alternative":["💗","💙","💚"],"categoria":"corpo"},{"id":"pancia","parola":"Pancia","fitz":"giallo","emoji":null,"shortcode":null,"alternative":["🤰","😋","🍕"],"categoria":"corpo"},{"id":"frase","parola":"Frase","fitz":"giallo","emoji":"💬","shortcode":"speech_balloon","alternative":["🗣️","💭","📝"],"categoria":"linguaggio"},{"id":"parola","parola":"Parola","fitz":"giallo","emoji":"💬","shortcode":"speech_balloon","alternative":["🗣️","📝","📚"],"categoria":"linguaggio"},{"id":"domanda","parola":"Domanda","fitz":"giallo","emoji":"❓","shortcode":"question","alternative":["❔","🤔","💭"],"categoria":"linguaggio"},{"id":"risposta","parola":"Risposta","fitz":"giallo","emoji":"💡","shortcode":"bulb","alternative":["✅","💬","☝️"],"categoria":"linguaggio"},{"id":"nome","parola":"Nome","fitz":"giallo","emoji":"📛","shortcode":"name_badge","alternative":["🏷️","📝","👤"],"categoria":"linguaggio"},{"id":"numero","parola":"Numero","fitz":"giallo","emoji":"🔢","shortcode":"1234","alternative":["#️⃣","🧮","💯"],"categoria":"linguaggio"},{"id":"colore","parola":"Colore","fitz":"giallo","emoji":"🎨","shortcode":"art","alternative":["🖌️","🌈","🖍️"],"categoria":"linguaggio"},{"id":"essere","parola":"Essere","fitz":"verde","emoji":null,"shortcode":null,"alternative":["👤","🪞","💭"],"categoria":"stato"},{"id":"avere","parola":"Avere","fitz":"verde","emoji":"🤲","shortcode":null,"alternative":["✋","👐","🛍️"],"categoria":"possesso"},{"id":"stare","parola":"Stare","fitz":"verde","emoji":"🧍","shortcode":null,"alternative":["🚶","💺","🛌"],"categoria":"stato"},{"id":"andare","parola":"Andare","fitz":"verde","emoji":"🚶","shortcode":"walking","alternative":["🏃","➡️","🚗"],"categoria":"movimento"},{"id":"venire","parola":"Venire","fitz":"verde","emoji":"🤚","shortcode":null,"alternative":["⬅️","↪️","🚶"],"categoria":"movimento"},{"id":"correre","parola":"Correre","fitz":"verde","emoji":"🏃","shortcode":"runner","alternative":["🚶","👟","💨"],"categoria":"movimento"},{"id":"camminare","parola":"Camminare","fitz":"verde","emoji":"🚶","shortcode":"walking","alternative":["🏃","👣","🛤️"],"categoria":"movimento"},{"id":"saltare","parola":"Saltare","fitz":"verde","emoji":null,"shortcode":null,"alternative":["🤸","🦘","🤾"],"categoria":"movimento"},{"id":"fermarsi","parola":"Fermarsi","fitz":"verde","emoji":"✋","shortcode":"hand","alternative":["🛑","⛔","🚦"],"categoria":"movimento"},{"id":"sedersi","parola":"Sedersi","fitz":"verde","emoji":"💺","shortcode":"seat","alternative":["🪑","🛋️","🧎"],"categoria":"movimento"},{"id":"alzarsi","parola":"Alzarsi","fitz":"verde","emoji":"🧍","shortcode":null,"alternative":["⬆️","🆙","🛌"],"categoria":"movimento"},{"id":"dormire","parola":"Dormire","fitz":"verde","emoji":"😴","shortcode":"sleeping","alternative":["💤","🛌","🛏️"],"categoria":"azione"},{"id":"svegliarsi","parola":"Svegliarsi","fitz":"verde","emoji":null,"shortcode":null,"alternative":["☀️","🔔","⏰"],"categoria":"azione"},{"id":"mangiare","parola":"Mangiare","fitz":"verde","emoji":"🍴","shortcode":"fork_and_knife","alternative":["🍽️","😋","👄"],"categoria":"azione"},{"id":"bere","parola":"Bere","fitz":"verde","emoji":"🥤","shortcode":null,"alternative":["🧃","🍷","🥛"],"categoria":"azione"},{"id":"cucinare","parola":"Cucinare","fitz":"verde","emoji":"🍳","shortcode":null,"alternative":["👨‍🍳","🥘","🔥"],"categoria":"azione"},{"id":"lavare","parola":"Lavare","fitz":"verde","emoji":"🧼","shortcode":null,"alternative":["🚿","🛁","🫧"],"categoria":"azione"},{"id":"pulire","parola":"Pulire","fitz":"verde","emoji":"🧹","shortcode":null,"alternative":["🧽","🪥","🧼"],"categoria":"azione"},{"id":"vestirsi","parola":"Vestirsi","fitz":"verde","emoji":"👕","shortcode":"shirt","alternative":["👗","👖","👔"],"categoria":"azione"},{"id":"giocare","parola":"Giocare","fitz":"verde","emoji":"🎮","shortcode":"video_game","alternative":["🧸","🎲","⚽"],"categoria":"azione"},{"id":"lavorare","parola":"Lavorare","fitz":"verde","emoji":"💼","shortcode":"briefcase","alternative":["⚙️","🔨","💻"],"categoria":"azione"},{"id":"studiare","parola":"Studiare","fitz":"verde","emoji":"📚","shortcode":"books","alternative":["📖","✏️","🎓"],"categoria":"azione"},{"id":"leggere","parola":"Leggere","fitz":"verde","emoji":"📖","shortcode":"book","alternative":["📚","👓","🤓"],"categoria":"azione"},{"id":"scrivere","parola":"Scrivere","fitz":"verde","emoji":"✍️","shortcode":null,"alternative":["📝","✏️","🖊️"],"categoria":"azione"},{"id":"disegnare","parola":"Disegnare","fitz":"verde","emoji":"🎨","shortcode":"art","alternative":["🖌️","✏️","🖍️"],"categoria":"azione"},{"id":"parlare","parola":"Parlare","fitz":"verde","emoji":"🗣️","shortcode":null,"alternative":["💬","👄","📢"],"categoria":"azione"},{"id":"ascoltare","parola":"Ascoltare","fitz":"verde","emoji":"👂","shortcode":"ear","alternative":["🎧","🔊","🎵"],"categoria":"azione"},{"id":"sentire","parola":"Sentire","fitz":"verde","emoji":"👂","shortcode":"ear","alternative":["👃","🤚","💞"],"categoria":"azione"},{"id":"vedere","parola":"Vedere","fitz":"verde","emoji":"👁️","shortcode":null,"alternative":["👀","👓","🔍"],"categoria":"azione"},{"id":"guardare","parola":"Guardare","fitz":"verde","emoji":"👀","shortcode":"eyes","alternative":["👁️","🔭","📺"],"categoria":"azione"},{"id":"cantare","parola":"Cantare","fitz":"verde","emoji":"🎤","shortcode":"microphone","alternative":["🎵","🎶","🎼"],"categoria":"azione"},{"id":"ballare","parola":"Ballare","fitz":"verde","emoji":"💃","shortcode":"dancer","alternative":["🕺","👯","🎶"],"categoria":"azione"},{"id":"piangere","parola":"Piangere","fitz":"verde","emoji":"😢","shortcode":"cry","alternative":["😭","💧","😔"],"categoria":"emozione"},{"id":"ridere","parola":"Ridere","fitz":"verde","emoji":"😂","shortcode":"joy","alternative":["😆","🤣","😄"],"categoria":"emozione"},{"id":"sorridere","parola":"Sorridere","fitz":"verde","emoji":"😊","shortcode":"blush","alternative":["🙂","😄","😃"],"categoria":"emozione"},{"id":"abbracciare","parola":"Abbracciare","fitz":"verde","emoji":"🤗","shortcode":null,"alternative":["🫂","💞","👐"],"categoria":"azione"},{"id":"baciare","parola":"Baciare","fitz":"verde","emoji":"😘","shortcode":"kissing_heart","alternative":["💋","😗","💏"],"categoria":"azione"},{"id":"dare","parola":"Dare","fitz":"verde","emoji":"🤲","shortcode":null,"alternative":["🎁","🫴","👐"],"categoria":"azione"},{"id":"prendere","parola":"Prendere","fitz":"verde","emoji":"✊","shortcode":"fist","alternative":["🫴","🤚","🤲"],"categoria":"azione"},{"id":"aprire","parola":"Aprire","fitz":"verde","emoji":"🔓","shortcode":"unlock","alternative":["🚪","📂","🔑"],"categoria":"azione"},{"id":"chiudere","parola":"Chiudere","fitz":"verde","emoji":"🔒","shortcode":"lock","alternative":["🚪","📕","🔐"],"categoria":"azione"},{"id":"comprare","parola":"Comprare","fitz":"verde","emoji":"🛒","shortcode":null,"alternative":["💳","🛍️","💰"],"categoria":"azione"},{"id":"vendere","parola":"Vendere","fitz":"verde","emoji":null,"shortcode":null,"alternative":["💰","🏷️","🛒"],"categoria":"azione"},{"id":"aiutare","parola":"Aiutare","fitz":"verde","emoji":"🤝","shortcode":null,"alternative":["🙏","🆘","🫂"],"categoria":"azione"},{"id":"amare","parola":"Amare","fitz":"verde","emoji":"❤️","shortcode":"heart","alternative":["😍","💕","💖"],"categoria":"emozione"},{"id":"volere","parola":"Volere","fitz":"verde","emoji":"🙏","shortcode":"pray","alternative":["☝️","👉","🎯"],"categoria":"stato"},{"id":"potere","parola":"Potere","fitz":"verde","emoji":"💪","shortcode":"muscle","alternative":["✅","🆗","🔓"],"categoria":"stato"},{"id":"sapere","parola":"Sapere","fitz":"verde","emoji":"🧠","shortcode":null,"alternative":["💡","📚","☝️"],"categoria":"stato"},{"id":"pensare","parola":"Pensare","fitz":"verde","emoji":"🤔","shortcode":null,"alternative":["💭","🧠","💡"],"categoria":"stato"},{"id":"credere","parola":"Credere","fitz":"verde","emoji":"🙏","shortcode":"pray","alternative":["💭","✝️","💚"],"categoria":"stato"},{"id":"trovare","parola":"Trovare","fitz":"verde","emoji":"🔍","shortcode":"mag","alternative":["🎯","💡","🪙"],"categoria":"azione"},{"id":"cercare","parola":"Cercare","fitz":"verde","emoji":"🔍","shortcode":"mag","alternative":["🔎","🗺️","🧭"],"categoria":"azione"},{"id":"perdere","parola":"Perdere","fitz":"verde","emoji":null,"shortcode":null,"alternative":["❌","🆘","💔"],"categoria":"azione"},{"id":"vincere","parola":"Vincere","fitz":"verde","emoji":"🏆","shortcode":"trophy","alternative":["🥇","🎉","🏅"],"categoria":"azione"},{"id":"grande","parola":"Grande","fitz":"blu","emoji":null,"shortcode":null,"alternative":["⬆️","🔝","💪"],"categoria":"dimensione"},{"id":"piccolo","parola":"Piccolo","fitz":"blu","emoji":null,"shortcode":null,"alternative":["⬇️","🔽","🤏"],"categoria":"dimensione"},{"id":"lungo","parola":"Lungo","fitz":"blu","emoji":"↔️","shortcode":"left_right_arrow","alternative":["📏","➡️","🛤️"],"categoria":"dimensione"},{"id":"corto","parola":"Corto","fitz":"blu","emoji":null,"shortcode":null,"alternative":["📏","⬅️","🤏"],"categoria":"dimensione"},{"id":"alto","parola":"Alto","fitz":"blu","emoji":"⬆️","shortcode":"arrow_up","alternative":["🔝","📏","🏔️"],"categoria":"dimensione"},{"id":"basso","parola":"Basso","fitz":"blu","emoji":"⬇️","shortcode":"arrow_down","alternative":["🔽","📏","🤏"],"categoria":"dimensione"},{"id":"molto","parola":"Molto","fitz":"blu","emoji":"💯","shortcode":"100","alternative":["➕","🔝","🎯"],"categoria":"quantità"},{"id":"poco","parola":"Poco","fitz":"blu","emoji":"🤏","shortcode":null,"alternative":["➖","🔽","⬇️"],"categoria":"quantità"},{"id":"tanto","parola":"Tanto","fitz":"blu","emoji":"💯","shortcode":"100","alternative":["➕","📈","🆙"],"categoria":"quantità"},{"id":"niente","parola":"Niente","fitz":"blu","emoji":"🚫","shortcode":"no_entry_sign","alternative":["❌","⛔","0️⃣"],"categoria":"quantità"},{"id":"tutto","parola":"Tutto","fitz":"blu","emoji":"💯","shortcode":"100","alternative":["✅","🌐","🆗"],"categoria":"quantità"},{"id":"più","parola":"Più","fitz":"blu","emoji":"➕","shortcode":"heavy_plus_sign","alternative":["🆙","🔝","💯"],"categoria":"quantità"},{"id":"meno","parola":"Meno","fitz":"blu","emoji":"➖","shortcode":"heavy_minus_sign","alternative":["🔽","⬇️","🤏"],"categoria":"quantità"},{"id":"uguale","parola":"Uguale","fitz":"blu","emoji":"🟰","shortcode":null,"alternative":["⚖️","✅","🪞"],"categoria":"quantità"},{"id":"felice","parola":"Felice","fitz":"blu","emoji":"😊","shortcode":"blush","alternative":["😄","😃","🥰"],"categoria":"emozione"},{"id":"triste","parola":"Triste","fitz":"blu","emoji":"😢","shortcode":"cry","alternative":["😭","😔","☹️"],"categoria":"emozione"},{"id":"arrabbiato","parola":"Arrabbiato","fitz":"blu","emoji":"😡","shortcode":"rage","alternative":["😠","🤬","😤"],"categoria":"emozione"},{"id":"stanco","parola":"Stanco","fitz":"blu","emoji":"😴","shortcode":"sleeping","alternative":["😪","🥱","💤"],"categoria":"stato"},{"id":"malato","parola":"Malato","fitz":"blu","emoji":"🤒","shortcode":null,"alternative":["🤧","😷","🤕"],"categoria":"stato"},{"id":"sano","parola":"Sano","fitz":"blu","emoji":"💪","shortcode":"muscle","alternative":["😊","🥗","🍎"],"categoria":"stato"},{"id":"caldo","parola":"Caldo","fitz":"blu","emoji":"🥵","shortcode":null,"alternative":["☀️","🔥","🌡️"],"categoria":"temperatura"},{"id":"freddo","parola":"Freddo","fitz":"blu","emoji":"🥶","shortcode":null,"alternative":["❄️","🧊","🌡️"],"categoria":"temperatura"},{"id":"veloce","parola":"Veloce","fitz":"blu","emoji":"💨","shortcode":"dash","alternative":["🏃","🚀","⚡"],"categoria":"velocità"},{"id":"lento","parola":"Lento","fitz":"blu","emoji":"🐌","shortcode":"snail","alternative":["🐢","⌛","🚶"],"categoria":"velocità"},{"id":"forte","parola":"Forte","fitz":"blu","emoji":"💪","shortcode":"muscle","alternative":["🦾","🔊","💯"],"categoria":"qualità"},{"id":"debole","parola":"Debole","fitz":"blu","emoji":null,"shortcode":null,"alternative":["🤒","😩","🪶"],"categoria":"qualità"},{"id":"bello","parola":"Bello","fitz":"blu","emoji":"✨","shortcode":"sparkles","alternative":["😍","🌟","💎"],"categoria":"qualità"},{"id":"brutto","parola":"Brutto","fitz":"blu","emoji":null,"shortcode":null,"alternative":["👎","😖","💩"],"categoria":"qualità"},{"id":"buono","parola":"Buono","fitz":"blu","emoji":"👍","shortcode":"thumbsup","alternative":["✅","😋","💯"],"categoria":"qualità"},{"id":"cattivo","parola":"Cattivo","fitz":"blu","emoji":"👎","shortcode":"thumbsdown","alternative":["❌","😠","💩"],"categoria":"qualità"},{"id":"pulito","parola":"Pulito","fitz":"blu","emoji":"✨","shortcode":"sparkles","alternative":["🧼","🧽","💎"],"categoria":"qualità"},{"id":"sporco","parola":"Sporco","fitz":"blu","emoji":null,"shortcode":null,"alternative":["💩","🗑️","🧹"],"categoria":"qualità"},{"id":"nuovo","parola":"Nuovo","fitz":"blu","emoji":"🆕","shortcode":"new","alternative":["✨","🎁","🌟"],"categoria":"qualità"},{"id":"vecchio","parola":"Vecchio","fitz":"blu","emoji":"👴","shortcode":"older_man","alternative":["🧓","📜","🏛️"],"categoria":"qualità"},{"id":"giovane","parola":"Giovane","fitz":"blu","emoji":"🧒","shortcode":null,"alternative":["👶","👦","👧"],"categoria":"qualità"},{"id":"rosso","parola":"Rosso","fitz":"blu","emoji":"🔴","shortcode":"red_circle","alternative":["❤️","🍅","🌹"],"categoria":"colore"},{"id":"blu_colore","parola":"Blu","fitz":"blu","emoji":"🔵","shortcode":"large_blue_circle","alternative":["💙","🌊","🌀"],"categoria":"colore"},{"id":"verde_colore","parola":"Verde","fitz":"blu","emoji":"🟢","shortcode":null,"alternative":["💚","🌳","🥬"],"categoria":"colore"},{"id":"giallo_colore","parola":"Giallo","fitz":"blu","emoji":"🟡","shortcode":null,"alternative":["💛","☀️","🌻"],"categoria":"colore"},{"id":"arancione","parola":"Arancione","fitz":"blu","emoji":"🟠","shortcode":null,"alternative":["🍊","🥕","🦊"],"categoria":"colore"},{"id":"viola_colore","parola":"Viola","fitz":"blu","emoji":"🟣","shortcode":null,"alternative":["💜","🍇","🍆"],"categoria":"colore"},{"id":"rosa_colore","parola":"Rosa","fitz":"blu","emoji":"🌸","shortcode":"cherry_blossom","alternative":["🩷","💗","🐷"],"categoria":"colore"},{"id":"nero","parola":"Nero","fitz":"blu","emoji":"⚫","shortcode":"black_circle","alternative":["🖤","🌑","◼️"],"categoria":"colore"},{"id":"bianco","parola":"Bianco","fitz":"blu","emoji":"⚪","shortcode":"white_circle","alternative":["🤍","☁️","◻️"],"categoria":"colore"},{"id":"marrone","parola":"Marrone","fitz":"blu","emoji":"🟤","shortcode":null,"alternative":["🤎","🍫","🐻"],"categoria":"colore"},{"id":"oggi","parola":"Oggi","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["☀️","📆","🗓️"],"categoria":"tempo"},{"id":"ieri","parola":"Ieri","fitz":"viola","emoji":"⬅️","shortcode":"arrow_left","alternative":["📅","🌅","🕐"],"categoria":"tempo"},{"id":"domani","parola":"Domani","fitz":"viola","emoji":"➡️","shortcode":"arrow_right","alternative":["📅","🌄","🌟"],"categoria":"tempo"},{"id":"mattina","parola":"Mattina","fitz":"viola","emoji":"🌅","shortcode":"sunrise","alternative":["☀️","🌄","🐓"],"categoria":"tempo"},{"id":"pomeriggio","parola":"Pomeriggio","fitz":"viola","emoji":"☀️","shortcode":"sunny","alternative":["🌤️","🕒","🥪"],"categoria":"tempo"},{"id":"sera","parola":"Sera","fitz":"viola","emoji":"🌇","shortcode":"city_sunset","alternative":["🌆","🌃","🌙"],"categoria":"tempo"},{"id":"notte","parola":"Notte","fitz":"viola","emoji":"🌙","shortcode":null,"alternative":["🌃","⭐","😴"],"categoria":"tempo"},{"id":"adesso","parola":"Adesso","fitz":"viola","emoji":"🕐","shortcode":"clock1","alternative":["⏰","⏱️","🔝"],"categoria":"tempo"},{"id":"prima","parola":"Prima","fitz":"viola","emoji":"⬅️","shortcode":"arrow_left","alternative":["⏪","↩️","1️⃣"],"categoria":"tempo"},{"id":"dopo","parola":"Dopo","fitz":"viola","emoji":"➡️","shortcode":"arrow_right","alternative":["⏩","↪️","2️⃣"],"categoria":"tempo"},{"id":"sempre","parola":"Sempre","fitz":"viola","emoji":"♾️","shortcode":null,"alternative":["🔁","➿","💯"],"categoria":"tempo"},{"id":"mai","parola":"Mai","fitz":"viola","emoji":"🚫","shortcode":"no_entry_sign","alternative":["❌","⛔","0️⃣"],"categoria":"tempo"},{"id":"presto","parola":"Presto","fitz":"viola","emoji":"⏰","shortcode":"alarm_clock","alternative":["🌅","🏃","💨"],"categoria":"tempo"},{"id":"tardi","parola":"Tardi","fitz":"viola","emoji":"🕘","shortcode":"clock9","alternative":["🌙","🐌","⏳"],"categoria":"tempo"},{"id":"lunedì","parola":"Lunedì","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["📆","🗓️","1️⃣"],"categoria":"giorno"},{"id":"martedì","parola":"Martedì","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["📆","🗓️","2️⃣"],"categoria":"giorno"},{"id":"mercoledì","parola":"Mercoledì","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["📆","🗓️","3️⃣"],"categoria":"giorno"},{"id":"giovedì","parola":"Giovedì","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["📆","🗓️","4️⃣"],"categoria":"giorno"},{"id":"venerdì","parola":"Venerdì","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["📆","🗓️","5️⃣"],"categoria":"giorno"},{"id":"sabato","parola":"Sabato","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["🎉","🛍️","6️⃣"],"categoria":"giorno"},{"id":"domenica","parola":"Domenica","fitz":"viola","emoji":"📅","shortcode":"date","alternative":["⛪","🛌","7️⃣"],"categoria":"giorno"},{"id":"gennaio","parola":"Gennaio","fitz":"viola","emoji":"❄️","shortcode":"snowflake","alternative":["🎍","🥂","📆"],"categoria":"mese"},{"id":"febbraio","parola":"Febbraio","fitz":"viola","emoji":"💝","shortcode":"gift_heart","alternative":["❤️","🌹","📆"],"categoria":"mese"},{"id":"marzo","parola":"Marzo","fitz":"viola","emoji":"🌷","shortcode":"tulip","alternative":["🌸","🌱","📆"],"categoria":"mese"},{"id":"aprile","parola":"Aprile","fitz":"viola","emoji":"🌧️","shortcode":null,"alternative":["🌷","🐰","📆"],"categoria":"mese"},{"id":"maggio","parola":"Maggio","fitz":"viola","emoji":"🌹","shortcode":"rose","alternative":["🌺","🌼","📆"],"categoria":"mese"},{"id":"giugno","parola":"Giugno","fitz":"viola","emoji":"☀️","shortcode":"sunny","alternative":["🌻","🍓","📆"],"categoria":"mese"},{"id":"luglio","parola":"Luglio","fitz":"viola","emoji":"🏖️","shortcode":null,"alternative":["☀️","🍉","📆"],"categoria":"mese"},{"id":"agosto","parola":"Agosto","fitz":"viola","emoji":"🌊","shortcode":"ocean","alternative":["⛱️","🍦","📆"],"categoria":"mese"},{"id":"settembre","parola":"Settembre","fitz":"viola","emoji":"🎒","shortcode":"school_satchel","alternative":["🍇","🍂","📆"],"categoria":"mese"},{"id":"ottobre","parola":"Ottobre","fitz":"viola","emoji":"🎃","shortcode":"jack_o_lantern","alternative":["🍂","🌰","📆"],"categoria":"mese"},{"id":"novembre","parola":"Novembre","fitz":"viola","emoji":"🍂","shortcode":"fallen_leaf","alternative":["🌧️","🕯️","📆"],"categoria":"mese"},{"id":"dicembre","parola":"Dicembre","fitz":"viola","emoji":"🎄","shortcode":"christmas_tree","alternative":["🎁","❄️","📆"],"categoria":"mese"},{"id":"e","parola":"E","fitz":"rosa","emoji":"➕","shortcode":"heavy_plus_sign","alternative":["🔗","🤝","➿"],"categoria":"connettivo"},{"id":"ma","parola":"Ma","fitz":"rosa","emoji":null,"shortcode":null,"alternative":["↔️","⚖️","🔀"],"categoria":"connettivo"},{"id":"però","parola":"Però","fitz":"rosa","emoji":null,"shortcode":null,"alternative":["↔️","⚖️","🛑"],"categoria":"connettivo"},{"id":"perché","parola":"Perché","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["💡","🎯","➡️"],"categoria":"connettivo"},{"id":"quindi","parola":"Quindi","fitz":"rosa","emoji":"➡️","shortcode":"arrow_right","alternative":["↪️","🎯","✅"],"categoria":"connettivo"},{"id":"allora","parola":"Allora","fitz":"rosa","emoji":"💡","shortcode":"bulb","alternative":["➡️","🎯","☝️"],"categoria":"connettivo"},{"id":"anche","parola":"Anche","fitz":"rosa","emoji":"➕","shortcode":"heavy_plus_sign","alternative":["🔗","✅","🤝"],"categoria":"connettivo"},{"id":"oppure","parola":"Oppure","fitz":"rosa","emoji":"🔀","shortcode":"twisted_rightwards_arrows","alternative":["↔️","⚖️","🆚"],"categoria":"connettivo"},{"id":"se","parola":"Se","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["🤔","🔀","↔️"],"categoria":"connettivo"},{"id":"non","parola":"Non","fitz":"rosa","emoji":"❌","shortcode":"x","alternative":["🚫","⛔","➖"],"categoria":"connettivo"},{"id":"sì","parola":"Sì","fitz":"rosa","emoji":"✅","shortcode":"white_check_mark","alternative":["👍","🆗","💚"],"categoria":"affermazione"},{"id":"no","parola":"No","fitz":"rosa","emoji":"❌","shortcode":"x","alternative":["🚫","👎","⛔"],"categoria":"affermazione"},{"id":"forse","parola":"Forse","fitz":"rosa","emoji":"🤷","shortcode":null,"alternative":["🤔","⚖️","↔️"],"categoria":"affermazione"},{"id":"chi","parola":"Chi","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["👤","🤔","🔍"],"categoria":"interrogativo"},{"id":"cosa","parola":"Cosa","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["📦","🤔","🔍"],"categoria":"interrogativo"},{"id":"dove","parola":"Dove","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["📍","🗺️","🔍"],"categoria":"interrogativo"},{"id":"quando","parola":"Quando","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["⏰","📅","🔍"],"categoria":"interrogativo"},{"id":"come","parola":"Come","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["🛠️","🤔","🗺️"],"categoria":"interrogativo"},{"id":"quanto","parola":"Quanto","fitz":"rosa","emoji":"❓","shortcode":"question","alternative":["🔢","💯","⚖️"],"categoria":"interrogativo"}];
+
+// Indici derivati
+const CAA_VOCAB_BY_FITZ = (() => {
+  const out = {};
+  for (const f of FITZGERALD) out[f.key] = [];
+  for (const v of CAA_VOCAB) { if (out[v.fitz]) out[v.fitz].push(v); }
+  return out;
+})();
+
+const CAA_VOCAB_BY_WORD = (() => {
+  const out = {};
+  for (const v of CAA_VOCAB) out[v.parola.toLowerCase()] = v;
+  return out;
+})();
+
+/* ════════════════════════════════════════════════════════════
+   UTILITÀ
+   ════════════════════════════════════════════════════════════ */
+
+// (Punto 3) ID crittograficamente robusto, con fallback se l'ambiente non supporta crypto.randomUUID
+const uid = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback per browser più vecchi: usa getRandomValues
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const a = new Uint8Array(16);
+    crypto.getRandomValues(a);
+    return Array.from(a).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+};
+
+// Debounce generico (Punto 4 / 18)
+function debounce(fn, ms) {
+  let t = null;
+  const debounced = (...args) => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => { t = null; fn(...args); }, ms);
+  };
+  debounced.flush = () => { if (t) { clearTimeout(t); t = null; } };
+  return debounced;
+}
+
+function hexToRgb(hex) {
+  const m = hex.replace('#','').match(/.{2}/g);
+  return m ? m.map(h => parseInt(h, 16)) : [0,0,0];
+}
+
+const STORAGE_KEY = 'caa_editor_data_v1';
+const STORAGE_RECENT_KEY = 'caa_recent_emojis_v1';
+const STORAGE_LIBRARY_KEY = 'caa_tile_library_v1';
+const STORAGE_OPENMOJI_KEY = 'caa_openmoji_cache_v1';
+const SCHEMA_VERSION = 1;
+
+/* ════════════════════════════════════════════════════════════
+   OPENMOJI INTEGRATION
+   ─ CDN: jsDelivr serve gli SVG di OpenMoji v15.1 (CC BY-SA 4.0)
+   ─ Cache: localStorage per riusarli offline dopo la prima volta
+   ─ Fallback: emoji di sistema se l'SVG non esiste
+   ════════════════════════════════════════════════════════════ */
+const OPENMOJI_CDN = 'https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.1.0/color/svg/';
+
+function emojiToCodepoint(emoji) {
+  if (!emoji) return '';
+  const cps = [];
+  for (const ch of [...emoji]) {
+    const cp = ch.codePointAt(0);
+    if (cp === 0xFE0F) continue; // skip variation selector-16
+    cps.push(cp.toString(16).toUpperCase().padStart(4, '0'));
+  }
+  return cps.join('-');
+}
+
+let _openmojiCache = null;
+function getOpenmojiCache() {
+  if (_openmojiCache) return _openmojiCache;
+  try { _openmojiCache = JSON.parse(localStorage.getItem(STORAGE_OPENMOJI_KEY) || '{}'); }
+  catch { _openmojiCache = {}; }
+  return _openmojiCache;
+}
+function saveOpenmojiCache() {
+  try {
+    localStorage.setItem(STORAGE_OPENMOJI_KEY, JSON.stringify(_openmojiCache));
+  } catch (e) {
+    // Quota piena: rimuovi 30 voci più vecchie (LRU approssimato)
+    const keys = Object.keys(_openmojiCache);
+    keys.slice(0, 30).forEach(k => delete _openmojiCache[k]);
+    try { localStorage.setItem(STORAGE_OPENMOJI_KEY, JSON.stringify(_openmojiCache)); } catch {}
+  }
+}
+
+const _openmojiInFlight = new Map();
+const _openmojiFailed = new Set();
+
+function fetchOpenmoji(emoji) {
+  if (!emoji) return Promise.reject('empty');
+  const cache = getOpenmojiCache();
+  if (cache[emoji]) return Promise.resolve(cache[emoji]);
+  if (_openmojiFailed.has(emoji)) return Promise.reject('previously-failed');
+  if (_openmojiInFlight.has(emoji)) return _openmojiInFlight.get(emoji);
+
+  const cp = emojiToCodepoint(emoji);
+  if (!cp) return Promise.reject('no-codepoint');
+  const url = OPENMOJI_CDN + cp + '.svg';
+  const p = fetch(url)
+    .then(r => r.ok ? r.text() : Promise.reject('http-' + r.status))
+    .then(svg => {
+      // Compatta lo SVG togliendo i commenti grossi di OpenMoji
+      const compact = svg.replace(/<!--[\s\S]*?-->/g, '').replace(/\s+/g, ' ').trim();
+      const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(compact)));
+      cache[emoji] = dataUrl;
+      saveOpenmojiCache();
+      _openmojiInFlight.delete(emoji);
+      return dataUrl;
+    })
+    .catch(err => {
+      _openmojiInFlight.delete(emoji);
+      _openmojiFailed.add(emoji);
+      throw err;
+    });
+  _openmojiInFlight.set(emoji, p);
+  return p;
+}
+
+// Precarica un set di emoji in background (non blocca)
+function preloadOpenmoji(emojis, maxParallel = 4) {
+  const queue = emojis.filter(Boolean);
+  let active = 0, idx = 0;
+  return new Promise(resolve => {
+    function next() {
+      if (idx >= queue.length && active === 0) return resolve();
+      while (active < maxParallel && idx < queue.length) {
+        const e = queue[idx++];
+        active++;
+        fetchOpenmoji(e).catch(() => {}).finally(() => { active--; next(); });
+      }
+    }
+    next();
+  });
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.schemaVersion !== SCHEMA_VERSION) return null;
+    return parsed;
+  } catch (e) { console.error('Errore lettura localStorage:', e); return null; }
+}
+function saveToStorage(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...data,
+      schemaVersion: SCHEMA_VERSION,
+      lastSaved: new Date().toISOString()
+    }));
+    return true;
+  } catch (e) { console.error('Errore scrittura localStorage:', e); return false; }
+}
+function loadRecentEmojis() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_RECENT_KEY) || '[]'); } catch { return []; }
+}
+function saveRecentEmojis(arr) {
+  try { localStorage.setItem(STORAGE_RECENT_KEY, JSON.stringify(arr.slice(0, 24))); } catch {}
+}
+function loadTileLibrary() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_LIBRARY_KEY) || '[]'); } catch { return []; }
+}
+function saveTileLibrary(arr) {
+  try { localStorage.setItem(STORAGE_LIBRARY_KEY, JSON.stringify(arr.slice(0, 30))); } catch {}
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+/* ════════════════════════════════════════════════════════════
+   PROGETTI: VUOTO, ESEMPIO, TEMPLATE (Punto 10)
+   ════════════════════════════════════════════════════════════ */
+function emptyProject(title = 'Nuova tavola CAA') {
+  return {
+    id: uid(), title,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    nuclei: [{ id: uid(), title: 'FRASE 1', tiles: [] }]
+  };
+}
+
+function exampleProject() {
+  return {
+    id: uid(), title: 'Esempio: Summa Theologiae',
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    nuclei: [
+      { id: uid(), title: 'FRASE 1 – IDENTIFICAZIONE', tiles: [
+        { id: uid(), color: 'grigio',  emoji: '👆', word: 'Questo',          isText: false },
+        { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',           isText: false },
+        { id: uid(), color: 'verde',   emoji: '🏷️', word: 'Si chiama',       isText: false },
+        { id: uid(), color: 'arancio', emoji: 'Summa\nTheologiae', word: 'Summa Theologiae', isText: true },
+      ]},
+      { id: uid(), title: 'FRASE 2 – AUTORE', tiles: [
+        { id: uid(), color: 'arancio', emoji: '✝️', word: "San Tommaso d'Aquino", isText: false },
+        { id: uid(), color: 'verde',   emoji: '✍️', word: 'Ha scritto',           isText: false },
+        { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',                isText: false },
+      ]},
+      { id: uid(), title: 'FRASE 3 – TEMPO', tiles: [
+        { id: uid(), color: 'viola', emoji: '⌛', word: 'Tanto tempo fa', isText: false },
+        { id: uid(), color: 'viola', emoji: 'XIII\nsecolo', word: '1200', isText: true },
+      ]}
+    ]
+  };
+}
+
+// Genera un nucleo con N tessere placeholder
+function buildPlaceholderNucleus(title, count) {
+  const tiles = [];
+  for (let i = 0; i < count; i++) {
+    tiles.push({ id: uid(), color: 'giallo', emoji: '📚', word: `Parola ${i+1}`, isText: false });
+  }
+  return { id: uid(), title, tiles };
+}
+
+// (Punto 10) Templates per nuovo progetto
+const TEMPLATES = [
+  {
+    key: 'empty', icon: '📄', name: 'Vuoto',
+    desc: 'Solo titolo e una frase vuota.',
+    build: () => emptyProject()
+  },
+  {
+    key: 'sentence', icon: '✏️', name: 'Frase singola',
+    desc: 'Una sola frase con 4 tessere placeholder.',
+    build: () => ({
+      id: uid(), title: 'Frase singola',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nuclei: [buildPlaceholderNucleus('FRASE 1', 4)]
+    })
+  },
+  {
+    key: 'narrative', icon: '📖', name: 'Racconto (3 frasi)',
+    desc: 'Tre frasi con 4 tessere ciascuna.',
+    build: () => ({
+      id: uid(), title: 'Racconto CAA',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nuclei: [
+        buildPlaceholderNucleus('FRASE 1', 4),
+        buildPlaceholderNucleus('FRASE 2', 4),
+        buildPlaceholderNucleus('FRASE 3', 4),
+      ]
+    })
+  },
+  {
+    key: 'board2x4', icon: '🔲', name: 'Tavola 2×4',
+    desc: '2 righe da 4 tessere — tavola di comunicazione di base.',
+    build: () => ({
+      id: uid(), title: 'Tavola 2×4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nuclei: [
+        buildPlaceholderNucleus('RIGA 1', 4),
+        buildPlaceholderNucleus('RIGA 2', 4),
+      ]
+    })
+  },
+  {
+    key: 'board4x4', icon: '🟦', name: 'Tavola 4×4',
+    desc: '4 righe da 4 tessere — tavola estesa.',
+    build: () => ({
+      id: uid(), title: 'Tavola 4×4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nuclei: [
+        buildPlaceholderNucleus('RIGA 1', 4),
+        buildPlaceholderNucleus('RIGA 2', 4),
+        buildPlaceholderNucleus('RIGA 3', 4),
+        buildPlaceholderNucleus('RIGA 4', 4),
+      ]
+    })
+  },
+  {
+    key: 'weekday', icon: '📆', name: 'Settimana',
+    desc: 'Giorni della settimana, 1 tessera ciascuno.',
+    build: () => {
+      const giorni = ['LUNEDÌ','MARTEDÌ','MERCOLEDÌ','GIOVEDÌ','VENERDÌ','SABATO','DOMENICA'];
+      return {
+        id: uid(), title: 'Settimana',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        nuclei: giorni.map(g => ({
+          id: uid(), title: g,
+          tiles: [{ id: uid(), color: 'viola', emoji: '📆', word: g, isText: false }]
+        }))
+      };
+    }
+  }
+];
+
+/* ════════════════════════════════════════════════════════════
+   ERROR BOUNDARY (Punto 13)
+   ════════════════════════════════════════════════════════════ */
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error('Errore catturato dall\'ErrorBoundary:', error, info); }
+  reset = () => this.setState({ hasError: false, error: null });
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-screen" role="alert">
+          <h2>Si è verificato un errore</h2>
+          <p>L'editor ha riscontrato un problema, ma i tuoi progetti sono al sicuro nel browser.</p>
+          <pre>{String(this.state.error?.message || this.state.error)}</pre>
+          <button className="btn btn-primary" onClick={this.reset}>Riprova</button>
+          {' '}
+          <button className="btn btn-secondary" onClick={() => location.reload()}>Ricarica pagina</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   CONFIRM DIALOG (Punto 5)
+   ════════════════════════════════════════════════════════════ */
+function ConfirmDialog({ open, title, message, confirmLabel='Conferma', cancelLabel='Annulla', danger=false, onConfirm, onCancel }) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      else if (e.key === 'Enter') { e.preventDefault(); onConfirm(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onConfirm, onCancel]);
+
+  if (!open) return null;
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onClick={onCancel}>
+      <div className="modal-content modal-small" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title" id="confirm-title">{title}</div>
+        </div>
+        <div className="modal-body">
+          <div style={{fontSize: 14, color: '#555', lineHeight: 1.5}}>{message}</div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onCancel}>{cancelLabel}</button>
+          <button
+            className={danger ? "btn btn-danger" : "btn btn-primary"}
+            onClick={onConfirm}
+            autoFocus
+          >{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   TEMPLATES MODAL (Punto 10)
+   ════════════════════════════════════════════════════════════ */
+function TemplatesModal({ open, onClose, onSelect }) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tpl-title" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title" id="tpl-title">Scegli un template</div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="modal-body">
+          <div className="templates-grid">
+            {TEMPLATES.map(t => (
+              <button key={t.key} className="template-card" onClick={() => onSelect(t)} aria-label={`Template ${t.name}`}>
+                <div className="template-icon" aria-hidden="true">{t.icon}</div>
+                <div className="template-name">{t.name}</div>
+                <div className="template-desc">{t.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   TESSERE
+   ════════════════════════════════════════════════════════════ */
+function TileEdit({ tile, isSelected, onClick, onDelete, tabIndex=0 }) {
+  const handleDelete = (e) => { e.stopPropagation(); onDelete(); };
+  const handleKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      onDelete();
+    }
+  };
+  return (
+    <div
+      className={`tile-edit fitz-${tile.color} ${tile.isText ? 'text-mode' : ''} ${isSelected ? 'selected' : ''}`}
+      onClick={onClick}
+      onKeyDown={handleKey}
+      tabIndex={tabIndex}
+      role="button"
+      aria-label={`Tessera: ${tile.word || 'senza parola'}, colore ${tile.color}${isSelected ? ', selezionata' : ''}`}
+      aria-pressed={isSelected}
+    >
+      <button className="tile-delete-btn" onClick={handleDelete} aria-label="Elimina tessera" tabIndex={-1}>×</button>
+      <div className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`} aria-hidden="true">
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : <EmojiImage emoji={tile.emoji} size={56} />}
+      </div>
+      <div className="tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+function PreviewTile({ tile }) {
+  return (
+    <div className={`preview-tile fitz-${tile.color} ${tile.isText ? 'text-mode' : ''}`}>
+      <div className="preview-tile-emoji">
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : <EmojiImage emoji={tile.emoji} size={56} />}
+      </div>
+      <div className="preview-tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   EMOJI PICKER (Punto 23: recenti, categorie sticky, ricerca per nome)
+   ════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════
+   SUGGESTIONS MODAL — mostrato quando si sceglie una parola CAA
+   senza emoji diretta. Offre 3-5 alternative + "altre emoji" + "testo".
+   ════════════════════════════════════════════════════════════ */
+function SuggestionsModal({ open, vocabWord, onClose, onPick, onOpenFullPicker }) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  if (!open || !vocabWord) return null;
+  const alternatives = (vocabWord.alternative || []).filter(Boolean);
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sugg-title" onClick={onClose}>
+      <div className="modal-content modal-small" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title" id="sugg-title">
+            «{vocabWord.parola}» non ha un pittogramma diretto
+          </div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{fontSize: 13, color: '#555', marginBottom: 4}}>
+            Scegli un pittogramma vicino al significato:
+          </div>
+          <div className="suggestions-grid">
+            {alternatives.map((emoji, i) => (
+              <button
+                key={i}
+                className="suggestion-card"
+                onClick={() => onPick({ emoji, word: vocabWord.parola, isText: false })}
+                aria-label={`Usa ${emoji} per ${vocabWord.parola}`}
+              >
+                <div className="suggestion-emoji-area">
+                  <EmojiImage emoji={emoji} size={42} />
+                </div>
+                <div style={{fontSize: 10, color: '#777'}}>opzione {i+1}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10}}>
+            <button className="btn btn-secondary btn-small" onClick={() => onOpenFullPicker(vocabWord)}>
+              🔍 Cerca altre emoji
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => onPick({ emoji: vocabWord.parola, word: vocabWord.parola, isText: true })}
+            >📝 Usa come testo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   EMOJI PICKER — due tab: Vocabolario CAA + Tutte le emoji
+   onSelect riceve un oggetto { emoji, word?, isText? }
+   ════════════════════════════════════════════════════════════ */
+function EmojiPicker({ open, onClose, onSelect, recentEmojis, onUseRecent, initialTab = 'vocab' }) {
+  const [tab, setTab] = useState(initialTab);
+  const [search, setSearch] = useState('');
+  const [vocabSearch, setVocabSearch] = useState('');
+  const [customInput, setCustomInput] = useState('');
+  const [suggestionsFor, setSuggestionsFor] = useState(null);
+  const bodyRef = useRef(null);
+  const catRefs = useRef({});
+  const fitzRefs = useRef({});
+
+  useEffect(() => {
+    if (!open) return;
+    setSearch(''); setVocabSearch(''); setCustomInput('');
+    setTab(initialTab);
+    setSuggestionsFor(null);
+    const handler = (e) => { if (e.key === 'Escape') { if (suggestionsFor) setSuggestionsFor(null); else onClose(); } };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, initialTab, onClose]);
+
+  if (!open) return null;
+
+  // ─ Helpers ─
+  const finishWithEmoji = (emoji) => {
+    onUseRecent(emoji);
+    onSelect({ emoji });
+    onClose();
+  };
+  const finishWithVocabPick = ({ emoji, word, isText }) => {
+    if (!isText) onUseRecent(emoji);
+    onSelect({ emoji, word, isText });
+    onClose();
+  };
+  const handleCustomConfirm = () => {
+    if (customInput.trim()) {
+      onSelect({ emoji: customInput.trim(), isText: true });
+      setCustomInput('');
+      onClose();
+    }
+  };
+  const handleVocabClick = (vocabWord) => {
+    if (vocabWord.emoji) {
+      finishWithVocabPick({ emoji: vocabWord.emoji, word: vocabWord.parola, isText: false });
+    } else {
+      setSuggestionsFor(vocabWord);
+    }
+  };
+
+  // ─ Ricerca emoji ─
+  const searchTerm = search.trim().toLowerCase();
+  const filteredEmojis = searchTerm
+    ? EMOJI_SEARCH_INDEX.filter(it => it.c.toLowerCase().includes(searchTerm))
+    : null;
+
+  // ─ Ricerca vocabolario CAA ─
+  const vocabTerm = vocabSearch.trim().toLowerCase();
+  const filteredVocab = vocabTerm
+    ? CAA_VOCAB.filter(v =>
+        v.parola.toLowerCase().includes(vocabTerm) ||
+        (v.categoria || '').toLowerCase().includes(vocabTerm)
+      )
+    : null;
+
+  const showRecents = recentEmojis.length > 0 && !filteredEmojis;
+
+  return (
+    <>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="picker-title" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxHeight: '90vh'}}>
+        <div className="modal-header">
+          <div className="modal-title" id="picker-title">Scegli pittogramma o testo</div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="picker-tabs" role="tablist">
+          <button
+            className={`picker-tab ${tab === 'vocab' ? 'active' : ''}`}
+            onClick={() => setTab('vocab')}
+            role="tab" aria-selected={tab === 'vocab'}
+          >📋 Vocabolario CAA</button>
+          <button
+            className={`picker-tab ${tab === 'emoji' ? 'active' : ''}`}
+            onClick={() => setTab('emoji')}
+            role="tab" aria-selected={tab === 'emoji'}
+          >😀 Tutte le emoji</button>
+        </div>
+
+        {tab === 'vocab' && (
+          <>
+            <div className="picker-toolbar">
+              <div className="picker-custom-row">
+                <input
+                  type="text"
+                  className="picker-search"
+                  placeholder="✏️ Testo personalizzato (es. XIII secolo)"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCustomConfirm()}
+                  aria-label="Testo personalizzato"
+                />
+                <button className="btn btn-primary btn-small" onClick={handleCustomConfirm} disabled={!customInput.trim()}>Usa</button>
+              </div>
+              <input
+                type="text"
+                className="picker-search"
+                placeholder="🔍 Cerca parola (es. casa, mangiare, felice…)"
+                value={vocabSearch}
+                onChange={e => setVocabSearch(e.target.value)}
+                aria-label="Cerca parola CAA"
+              />
+              {!filteredVocab && (
+                <div className="picker-cat-nav" role="tablist" aria-label="Categorie Fitzgerald">
+                  {FITZGERALD.map(f => (
+                    <button
+                      key={f.key}
+                      className="picker-cat-btn"
+                      onClick={() => {
+                        const el = fitzRefs.current[f.key];
+                        if (el && bodyRef.current) bodyRef.current.scrollTo({ top: el.offsetTop - bodyRef.current.offsetTop, behavior: 'smooth' });
+                      }}
+                      style={{borderLeft: `4px solid ${f.label}`}}
+                    >{f.name.split('/')[0].trim()}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div ref={bodyRef} style={{flex: 1, overflowY: 'auto'}}>
+              {filteredVocab ? (
+                filteredVocab.length === 0 ? (
+                  <div className="emoji-empty">Nessuna parola trovata per «{vocabSearch}»</div>
+                ) : (
+                  <>
+                    <div className="vocab-fitz-header">{filteredVocab.length} risultati</div>
+                    <div className="vocab-grid">
+                      {filteredVocab.slice(0, 100).map(v => (
+                        <button
+                          key={v.id}
+                          className={`vocab-card ${!v.emoji ? 'no-emoji' : ''}`}
+                          onClick={() => handleVocabClick(v)}
+                          aria-label={`Inserisci ${v.parola}`}
+                          title={v.categoria || ''}
+                        >
+                          {!v.emoji && <span className="no-emoji-badge" title="Senza emoji diretta">⚠</span>}
+                          <div className="vocab-emoji-area">
+                            {v.emoji ? <EmojiImage emoji={v.emoji} size={28} /> : <span>—</span>}
+                          </div>
+                          <div className="vocab-word">{v.parola}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )
+              ) : (
+                FITZGERALD.map(f => {
+                  const words = CAA_VOCAB_BY_FITZ[f.key] || [];
+                  if (words.length === 0) return null;
+                  return (
+                    <div key={f.key} ref={el => fitzRefs.current[f.key] = el}>
+                      <div className="vocab-fitz-header">
+                        <div className="vocab-fitz-dot" style={{background: f.label}}></div>
+                        <span style={{color: f.label}}>{f.name}</span>
+                        <span style={{color: '#aaa', marginLeft: 'auto'}}>{words.length}</span>
+                      </div>
+                      <div className="vocab-grid">
+                        {words.map(v => (
+                          <button
+                            key={v.id}
+                            className={`vocab-card ${!v.emoji ? 'no-emoji' : ''}`}
+                            onClick={() => handleVocabClick(v)}
+                            aria-label={`Inserisci ${v.parola}`}
+                            title={v.categoria || ''}
+                          >
+                            {!v.emoji && <span className="no-emoji-badge" title="Senza emoji diretta">⚠</span>}
+                            <div className="vocab-emoji-area">
+                              {v.emoji ? <EmojiImage emoji={v.emoji} size={28} /> : <span>—</span>}
+                            </div>
+                            <div className="vocab-word">{v.parola}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === 'emoji' && (
+          <>
+            <div className="picker-toolbar">
+              <div className="picker-custom-row">
+                <input
+                  type="text"
+                  className="picker-search"
+                  placeholder="✏️ Testo personalizzato"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCustomConfirm()}
+                />
+                <button className="btn btn-primary btn-small" onClick={handleCustomConfirm} disabled={!customInput.trim()}>Usa</button>
+              </div>
+              <input
+                type="text"
+                className="picker-search"
+                placeholder="🔍 Cerca per nome (es. cat, book, heart…)"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {!filteredEmojis && (
+                <div className="picker-cat-nav" role="tablist">
+                  {showRecents && (
+                    <button className="picker-cat-btn" onClick={() => {
+                      const el = catRefs.current['Recenti'];
+                      if (el && bodyRef.current) bodyRef.current.scrollTo({ top: el.offsetTop - bodyRef.current.offsetTop, behavior: 'smooth' });
+                    }}>🕐 Recenti</button>
+                  )}
+                  {EMOJI_CATEGORIES.map(cat => (
+                    <button key={cat} className="picker-cat-btn" onClick={() => {
+                      const el = catRefs.current[cat];
+                      if (el && bodyRef.current) bodyRef.current.scrollTo({ top: el.offsetTop - bodyRef.current.offsetTop, behavior: 'smooth' });
+                    }}>{EMOJI_CAT_ICON[cat]} {cat}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div ref={bodyRef} style={{flex: 1, overflowY: 'auto'}}>
+              {filteredEmojis ? (
+                filteredEmojis.length === 0 ? (
+                  <div className="emoji-empty">Nessun risultato per «{search}»</div>
+                ) : (
+                  <>
+                    <div className="emoji-category-header">{filteredEmojis.length} risultati</div>
+                    <div className="emoji-grid">
+                      {filteredEmojis.slice(0, 200).map((item, i) => (
+                        <button
+                          key={item.c + i}
+                          className="emoji-btn"
+                          onClick={() => finishWithEmoji(item.e)}
+                          title={`:${item.c}:`}
+                          aria-label={item.c}
+                        ><EmojiImage emoji={item.e} size={30} /></button>
+                      ))}
+                    </div>
+                  </>
+                )
+              ) : (
+                <>
+                  {showRecents && (
+                    <div ref={el => catRefs.current['Recenti'] = el}>
+                      <div className="emoji-category-header">🕐 Recenti</div>
+                      <div className="emoji-grid">
+                        {recentEmojis.map((emoji, i) => (
+                          <button key={i} className="emoji-btn" onClick={() => finishWithEmoji(emoji)} aria-label="emoji recente">
+                            <EmojiImage emoji={emoji} size={30} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {EMOJI_CATEGORIES.map(cat => (
+                    <div key={cat} ref={el => catRefs.current[cat] = el}>
+                      <div className="emoji-category-header">{EMOJI_CAT_ICON[cat]} {cat}</div>
+                      <div className="emoji-grid">
+                        {EMOJI_DATA[cat].map((item, i) => (
+                          <button
+                            key={item.c + i}
+                            className="emoji-btn"
+                            onClick={() => finishWithEmoji(item.e)}
+                            title={`:${item.c}:`}
+                            aria-label={item.c}
+                          ><EmojiImage emoji={item.e} size={30} /></button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+    <SuggestionsModal
+      open={!!suggestionsFor}
+      vocabWord={suggestionsFor}
+      onClose={() => setSuggestionsFor(null)}
+      onPick={(result) => { setSuggestionsFor(null); finishWithVocabPick(result); }}
+      onOpenFullPicker={(vw) => { setSuggestionsFor(null); setTab('emoji'); setSearch(''); }}
+    />
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   TILE EDITOR PANEL
+   ════════════════════════════════════════════════════════════ */
+function TileEditorPanel({ tile, onUpdate, onClose, recentEmojis, onUseRecent }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const handlePickerResult = (result) => {
+    // result può contenere: { emoji, word?, isText? }
+    const newTile = { ...tile };
+    if (result.emoji !== undefined) newTile.emoji = result.emoji;
+    if (result.word !== undefined) newTile.word = result.word;
+    if (result.isText !== undefined) {
+      newTile.isText = result.isText;
+    } else {
+      // heuristic: testo se contiene lettere o > 4 chars
+      newTile.isText = /[a-zA-Zàèìòù\s]/.test(result.emoji) || result.emoji.length > 4;
+    }
+    onUpdate(newTile);
+  };
+
+  return (
+    <div className="tile-editor-panel" role="region" aria-label="Modifica tessera">
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Colore</div>
+        <div className="color-selector" role="radiogroup" aria-label="Colore Fitzgerald">
+          {FITZGERALD.map(f => (
+            <div
+              key={f.key}
+              className={`color-chip ${tile.color === f.key ? 'selected' : ''}`}
+              style={{background: f.label}}
+              onClick={() => onUpdate({...tile, color: f.key})}
+              title={f.name}
+              role="radio"
+              aria-checked={tile.color === f.key}
+              aria-label={f.name}
+              tabIndex={0}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onUpdate({...tile, color: f.key}))}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Pittogramma</div>
+        <button className="btn btn-secondary" onClick={() => setPickerOpen(true)} aria-label="Cambia pittogramma">
+          {tile.isText ? '📝 Testo' : '😀 Emoji'} • Cambia
+        </button>
+        <span style={{marginLeft: 4, display: 'inline-flex', alignItems: 'center'}}>
+          {tile.isText
+            ? <span style={{fontSize: 13, color: '#666'}}>«{tile.emoji.replace(/\n/g,' ')}»</span>
+            : <EmojiImage emoji={tile.emoji} size={36} />}
+        </span>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Parola CAA</div>
+        <input
+          type="text"
+          className="text-input"
+          value={tile.word}
+          onChange={e => onUpdate({...tile, word: e.target.value})}
+          placeholder="Parola sotto la tessera"
+          aria-label="Parola CAA"
+        />
+      </div>
+      <div className="tile-editor-row" style={{justifyContent: 'flex-end'}}>
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={tile.isText}
+            onChange={e => onUpdate({...tile, isText: e.target.checked})}
+          />
+          <span className="toggle-track"></span>
+          Modalità testo
+        </label>
+        <button className="btn btn-secondary btn-small" onClick={onClose}>Fine</button>
+      </div>
+      <EmojiPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handlePickerResult}
+        recentEmojis={recentEmojis}
+        onUseRecent={onUseRecent}
+      />
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   NUCLEUS BLOCK
+   ════════════════════════════════════════════════════════════ */
+function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUseRecent, onAddToLibrary }) {
+  const [selectedTileId, setSelectedTileId] = useState(null);
+
+  const updateNucleusTitle = (title) => onUpdate({...nucleus, title});
+
+  const addTile = () => {
+    const newTile = { id: uid(), color: 'giallo', emoji: '📚', word: 'Nuova', isText: false };
+    onUpdate({...nucleus, tiles: [...nucleus.tiles, newTile]});
+    setSelectedTileId(newTile.id);
+  };
+
+  const updateTile = (updated) => {
+    onUpdate({ ...nucleus, tiles: nucleus.tiles.map(t => t.id === updated.id ? updated : t) });
+    // Quando una tessera viene modificata in modo significativo, la salvo in libreria
+    onAddToLibrary(updated);
+  };
+
+  const deleteTile = (tileId) => {
+    onUpdate({ ...nucleus, tiles: nucleus.tiles.filter(t => t.id !== tileId) });
+    if (selectedTileId === tileId) setSelectedTileId(null);
+  };
+
+  const moveNucleusUp = () => onUpdate({...nucleus, _moveDir: 'up'});
+  const moveNucleusDown = () => onUpdate({...nucleus, _moveDir: 'down'});
+
+  const selectedTile = nucleus.tiles.find(t => t.id === selectedTileId);
+
+  return (
+    <div className="nucleus-block">
+      <div className="nucleus-header">
+        <input
+          type="text"
+          className="nucleus-title-input"
+          value={nucleus.title}
+          onChange={e => updateNucleusTitle(e.target.value)}
+          placeholder="Titolo del nucleo"
+          aria-label="Titolo del nucleo"
+        />
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusUp} title="Sposta su" aria-label="Sposta nucleo su">↑</button>
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusDown} title="Sposta giù" aria-label="Sposta nucleo giù">↓</button>
+        {!isOnly && (
+          <button className="btn btn-icon btn-danger" onClick={onDelete} title="Elimina nucleo" aria-label="Elimina nucleo">🗑</button>
+        )}
+      </div>
+      <div className="tiles-container">
+        {nucleus.tiles.map(tile => (
+          <TileEdit
+            key={tile.id}
+            tile={tile}
+            isSelected={tile.id === selectedTileId}
+            onClick={() => setSelectedTileId(tile.id === selectedTileId ? null : tile.id)}
+            onDelete={() => deleteTile(tile.id)}
+          />
+        ))}
+        <button className="add-tile-btn" onClick={addTile} title="Aggiungi tessera" aria-label="Aggiungi tessera">+</button>
+      </div>
+      {selectedTile && (
+        <TileEditorPanel
+          tile={selectedTile}
+          onUpdate={updateTile}
+          onClose={() => setSelectedTileId(null)}
+          recentEmojis={recentEmojis}
+          onUseRecent={onUseRecent}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   TILE LIBRARY (Punto 9)
+   ════════════════════════════════════════════════════════════ */
+function TileLibrary({ library, onPick, onClear }) {
+  if (library.length === 0) {
+    return (
+      <div className="library-empty">
+        Le tessere che modifichi vengono salvate qui per essere riusate facilmente.
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="library-row" role="list" aria-label="Libreria tessere riutilizzabili">
+        {library.map((tile, i) => (
+          <button
+            key={i}
+            className={`library-mini-tile fitz-${tile.color} ${tile.isText ? 'text-mode' : ''}`}
+            onClick={() => onPick(tile)}
+            title={`${tile.word} — clicca per inserire in un nucleo`}
+            aria-label={`Riusa tessera ${tile.word}`}
+          >
+            <div className={`library-mini-emoji ${tile.isText ? 'text-mode' : ''}`}>
+              {tile.isText
+                ? tile.emoji.split('\n').slice(0,2).map((l,j) => <div key={j}>{l}</div>)
+                : <EmojiImage emoji={tile.emoji} size={32} />}
+            </div>
+            <div className="library-mini-label">{tile.word || '—'}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{textAlign: 'right', marginTop: 6}}>
+        <button className="btn btn-secondary btn-small" onClick={onClear}>Svuota libreria</button>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   PREVIEW VIEW
+   ════════════════════════════════════════════════════════════ */
+function PreviewView({ project }) {
+  if (!project) return null;
+  return (
+    <div id="preview-content" className="preview-container">
+      <div className="preview-doc-title">{project.title}</div>
+      <div className="preview-legenda">
+        {FITZGERALD.map(f => (
+          <div key={f.key} className="preview-legenda-item">
+            <div className="preview-legenda-dot" style={{background: f.label}}></div>
+            {f.name.split('/')[0].trim()}
+          </div>
+        ))}
+      </div>
+      {project.nuclei.map(nucleus => (
+        <div key={nucleus.id} className="preview-nucleus">
+          <div className="preview-nucleus-title">{nucleus.title}</div>
+          <div className="preview-tiles-row">
+            {nucleus.tiles.map(tile => <PreviewTile key={tile.id} tile={tile} />)}
+            {nucleus.tiles.length === 0 && (
+              <div style={{color: '#bbb', fontSize: 12, fontStyle: 'italic'}}>(nucleo vuoto)</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, [message, onDone]);
+  return message ? <div className="toast" role="status" aria-live="polite">{message}</div> : null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   EMOJI IMAGE — renderizza un'emoji come SVG OpenMoji (con cache)
+   o, in fallback, come emoji Unicode di sistema.
+   ════════════════════════════════════════════════════════════ */
+function EmojiImage({ emoji, size = 40, style = {} }) {
+  const cache = getOpenmojiCache();
+  const cached = cache[emoji];
+  const [svg, setSvg] = useState(cached || null);
+  const [failed, setFailed] = useState(_openmojiFailed.has(emoji));
+
+  useEffect(() => {
+    if (!emoji) return;
+    if (cache[emoji]) { setSvg(cache[emoji]); setFailed(false); return; }
+    if (_openmojiFailed.has(emoji)) { setFailed(true); return; }
+    let cancelled = false;
+    fetchOpenmoji(emoji)
+      .then(d => { if (!cancelled) { setSvg(d); setFailed(false); } })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [emoji]);
+
+  if (!emoji) {
+    return <span style={{fontSize: size * 0.55, color: '#bbb', ...style}}>—</span>;
+  }
+  if (failed) {
+    return <span style={{fontSize: size * 0.78, lineHeight: 1, ...style}}>{emoji}</span>;
+  }
+  if (!svg) {
+    return <span style={{fontSize: size * 0.78, opacity: 0.5, lineHeight: 1, ...style}}>{emoji}</span>;
+  }
+  return (
+    <img src={svg} alt="" width={size} height={size} className="emoji-img" style={style} />
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   EXPORT PDF VETTORIALE (Punti 19 + 21 + "PDF vettoriale")
+   ─ jsPDF disegna shape/testi in vettoriale.
+   ─ Le emoji sono renderizzate come piccoli PNG individuali via canvas
+     (necessario perché jsPDF non incorpora font emoji a colori).
+   ─ Pagination: ogni nucleo che non entra nello spazio rimasto va a pagina nuova.
+   ════════════════════════════════════════════════════════════ */
+// Renderizza un'emoji come PNG, preferendo OpenMoji se in cache.
+// Ritorna direttamente il data URL.
+function renderEmojiPNG(emoji, sizePx) {
+  // Fallback: emoji di sistema
+  const c = document.createElement('canvas');
+  c.width = sizePx;
+  c.height = sizePx;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, sizePx, sizePx);
+  ctx.font = `${Math.round(sizePx * 0.78)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, sizePx / 2, sizePx / 2 + sizePx * 0.04);
+  return c.toDataURL('image/png');
+}
+
+// Async: ottiene PNG di OpenMoji se disponibile, altrimenti fallback Unicode
+function getEmojiPNGAsync(emoji, sizePx) {
+  return new Promise(resolve => {
+    const cache = getOpenmojiCache();
+    const dataUrl = cache[emoji];
+    if (!dataUrl || _openmojiFailed.has(emoji)) {
+      resolve(renderEmojiPNG(emoji, sizePx));
+      return;
+    }
+    // Renderizza SVG in canvas a sizePx
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = sizePx; c.height = sizePx;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, sizePx, sizePx);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(renderEmojiPNG(emoji, sizePx));
+    img.src = dataUrl;
+  });
+}
+
+async function drawTileVector(pdf, tile, x, y, w, h, emojiCache) {
+  const labelH = h * 0.30;
+  const emojiH = h - labelH;
+  const bg = FITZ_BG[tile.color] || [255,255,255];
+  const lbl = FITZ_LABEL[tile.color] || [100,100,100];
+
+  // Background emoji area (vettoriale, angoli arrotondati)
+  pdf.setFillColor(bg[0], bg[1], bg[2]);
+  pdf.roundedRect(x, y, w, emojiH + 0.5, 1.8, 1.8, 'F');
+
+  // Background label
+  pdf.setFillColor(lbl[0], lbl[1], lbl[2]);
+  pdf.rect(x, y + emojiH, w, labelH, 'F');
+
+  // Bordo esterno
+  pdf.setDrawColor(225);
+  pdf.setLineWidth(0.12);
+  pdf.roundedRect(x, y, w, h, 1.8, 1.8, 'S');
+
+  // Pittogramma o testo nell'area emoji
+  if (tile.isText) {
+    pdf.setTextColor(lbl[0], lbl[1], lbl[2]);
+    pdf.setFont('helvetica', tile.color === 'arancio' ? 'bolditalic' : 'bold');
+    pdf.setFontSize(10);
+    const lines = tile.emoji.split('\n');
+    const lineH = 3.6;
+    const totalH = lines.length * lineH;
+    const startY = y + emojiH/2 - totalH/2 + lineH/2 + 0.3;
+    lines.forEach((line, i) => {
+      pdf.text(line, x + w/2, startY + i * lineH, { align: 'center' });
+    });
+  } else {
+    const emoji = tile.emoji || '';
+    const cacheKey = emoji + '@128';
+    if (!emojiCache[cacheKey]) {
+      // OpenMoji se disponibile, altrimenti emoji di sistema
+      emojiCache[cacheKey] = await getEmojiPNGAsync(emoji, 128);
+    }
+    const imgData = emojiCache[cacheKey];
+    const imgSize = Math.min(w * 0.62, emojiH * 0.78);
+    pdf.addImage(imgData, 'PNG', x + (w - imgSize)/2, y + (emojiH - imgSize)/2, imgSize, imgSize);
+  }
+
+  // Label
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(6.4);
+  const labelText = (tile.word || '—').toUpperCase();
+  const labelLines = pdf.splitTextToSize(labelText, w - 2);
+  const maxLines = Math.min(labelLines.length, 2);
+  const lineH = 2.4;
+  const totalH = maxLines * lineH;
+  const startY = y + emojiH + (labelH - totalH)/2 + lineH * 0.75;
+  for (let i = 0; i < maxLines; i++) {
+    pdf.text(labelLines[i], x + w/2, startY + i * lineH, { align: 'center' });
+  }
+}
+
+async function exportVectorPDF(project) {
+  if (!project) return;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+  const pageW = pdf.internal.pageSize.getWidth();   // 297
+  const pageH = pdf.internal.pageSize.getHeight();  // 210
+  const margin = 12;
+  const contentW = pageW - 2 * margin;
+  const TILE_W = 30;
+  const TILE_H = 36;
+  const TILE_GAP = 3;
+  const ROW_GAP = 3;
+  const NUCLEUS_TITLE_H = 7;
+  const NUCLEUS_GAP = 10;
+
+  // ── Preload OpenMoji per tutte le emoji uniche del progetto ──
+  const uniqueEmojis = [...new Set(
+    project.nuclei.flatMap(n => n.tiles.filter(t => !t.isText).map(t => t.emoji)).filter(Boolean)
+  )];
+  await preloadOpenmoji(uniqueEmojis, 6);
+
+  const emojiCache = {};
+
+  // ─ Intestazione documento ─
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(15);
+  pdf.setTextColor(60);
+  pdf.text(project.title || 'Tavola CAA', pageW / 2, margin + 2, { align: 'center' });
+
+  let cursorY = margin + 8;
+
+  // ─ Legenda Fitzgerald (vettoriale) ─
+  pdf.setFontSize(7.5);
+  const legendItems = FITZGERALD.map(f => ({ name: f.name.split('/')[0].trim(), color: hexToRgb(f.label) }));
+  const totalLegendW = legendItems.reduce((acc, it) => acc + pdf.getTextWidth(it.name) + 8, 0);
+  let legendX = (pageW - totalLegendW) / 2;
+  legendItems.forEach(it => {
+    pdf.setFillColor(it.color[0], it.color[1], it.color[2]);
+    pdf.circle(legendX + 1.5, cursorY + 1, 1.4, 'F');
+    pdf.setTextColor(110);
+    pdf.text(it.name, legendX + 4, cursorY + 1.8);
+    legendX += pdf.getTextWidth(it.name) + 8;
+  });
+  cursorY += 7;
+
+  // ─ Nuclei (Punto 21: ogni nucleo è un blocco non spezzabile a metà se possibile) ─
+  for (const nucleus of project.nuclei) {
+    // Calcola spazio richiesto
+    const tilesPerRow = Math.max(1, Math.floor((contentW + TILE_GAP) / (TILE_W + TILE_GAP)));
+    const rows = Math.max(1, Math.ceil((nucleus.tiles.length || 1) / tilesPerRow));
+    const tilesBlockH = rows * TILE_H + (rows - 1) * ROW_GAP;
+    const neededH = NUCLEUS_TITLE_H + tilesBlockH + NUCLEUS_GAP;
+
+    // Se non c'entra nello spazio residuo, nuova pagina (Punto 21)
+    if (cursorY + neededH > pageH - margin) {
+      pdf.addPage();
+      cursorY = margin;
+    }
+
+    // Titolo nucleo
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(135);
+    pdf.text((nucleus.title || '').toUpperCase(), pageW / 2, cursorY + 4, { align: 'center' });
+    cursorY += NUCLEUS_TITLE_H;
+
+    // Tessere
+    if (nucleus.tiles.length === 0) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(190);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text('(nucleo vuoto)', pageW / 2, cursorY + 6, { align: 'center' });
+      cursorY += 10;
+    } else {
+      // Layout: prima riga centrata se entra tutto, altrimenti wrap dal margine
+      const fitsOneRow = nucleus.tiles.length <= tilesPerRow;
+      let rowTiles = nucleus.tiles.slice();
+      let ry = cursorY;
+      while (rowTiles.length > 0) {
+        const thisRow = rowTiles.splice(0, tilesPerRow);
+        const rowW = thisRow.length * TILE_W + (thisRow.length - 1) * TILE_GAP;
+        const startX = fitsOneRow
+          ? (pageW - rowW) / 2
+          : margin + Math.max(0, (contentW - rowW) / 2);
+        let rx = startX;
+        for (const tile of thisRow) {
+          await drawTileVector(pdf, tile, rx, ry, TILE_W, TILE_H, emojiCache);
+          rx += TILE_W + TILE_GAP;
+        }
+        ry += TILE_H + ROW_GAP;
+      }
+      cursorY = ry - ROW_GAP;
+    }
+    cursorY += NUCLEUS_GAP;
+  }
+
+  // ─ Footer paginazione ─
+  const pageCount = pdf.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    pdf.setPage(p);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(170);
+    pdf.text(`${p} / ${pageCount}`, pageW - margin, pageH - 5, { align: 'right' });
+    pdf.text('Inclusia — Editor CAA', margin, pageH - 5);
+  }
+
+  const safeName = (project.title || 'tavola_caa').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
+  pdf.save(`${safeName}.pdf`);
+}
+
+/* ════════════════════════════════════════════════════════════
+   EXPORT PNG (Punto 22: ridimensionamento dinamico)
+   ════════════════════════════════════════════════════════════ */
+async function exportPNGSized(project, previewElementId='preview-content') {
+  const element = document.getElementById(previewElementId);
+  if (!element) throw new Error('Preview non trovata');
+
+  // Ridimensionamento dinamico: limite ~4 megapixel totale per evitare file gigantesche
+  const naturalW = element.scrollWidth;
+  const naturalH = element.scrollHeight;
+  const maxMegaPx = 6;            // soglia ragionevole
+  const baseScale = 2;
+  const wouldBeMP = (naturalW * baseScale * naturalH * baseScale) / 1_000_000;
+  let scale = baseScale;
+  if (wouldBeMP > maxMegaPx) {
+    scale = Math.max(1, Math.sqrt((maxMegaPx * 1_000_000) / (naturalW * naturalH)));
+  }
+  scale = Math.round(scale * 100) / 100;
+
+  const canvas = await html2canvas(element, {
+    scale,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false,
+    windowWidth: Math.max(element.scrollWidth, 800)
+  });
+
+  // Conversione → blob con qualità adattiva
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (!blob) return reject(new Error('Conversione canvas fallita'));
+      resolve({ blob, scale, w: canvas.width, h: canvas.height });
+    }, 'image/png');
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   APP PRINCIPALE
+   ════════════════════════════════════════════════════════════ */
+function App() {
+  const [projects, setProjects] = useState([]);
+  const [currentId, setCurrentId] = useState(null);
+  const [view, setView] = useState('editor');
+  const [toast, setToast] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [recentEmojis, setRecentEmojis] = useState([]);
+  const [tileLibrary, setTileLibrary] = useState([]);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState(null); // {title,message,onConfirm,danger}
+
+  const fileInputRef = useRef(null);
+  const initialized = useRef(false);
+
+  // ─ History per undo/redo (Punto 8) ─
+  const historyRef = useRef({ past: [], future: [] });
+  const [historyTick, setHistoryTick] = useState(0); // forza re-render quando cambia lo stack
+
+  // ─ Caricamento iniziale ─
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    const data = loadFromStorage();
+    if (data && data.projects && data.projects.length > 0) {
+      setProjects(data.projects);
+      setCurrentId(data.currentId || data.projects[0].id);
+    } else {
+      const example = exampleProject();
+      setProjects([example]);
+      setCurrentId(example.id);
+    }
+    setRecentEmojis(loadRecentEmojis());
+    setTileLibrary(loadTileLibrary());
+  }, []);
+
+  // ─ Salvataggio automatico DEBOUNCED (Punti 4 + 18) ─
+  const debouncedSave = useMemo(() => debounce((payload) => {
+    saveToStorage(payload);
+  }, 300), []);
+  useEffect(() => {
+    if (!initialized.current || projects.length === 0) return;
+    debouncedSave({ projects, currentId });
+  }, [projects, currentId, debouncedSave]);
+
+  // Flush save quando la pagina viene chiusa
+  useEffect(() => {
+    const handler = () => {
+      debouncedSave.flush();
+      if (projects.length) saveToStorage({ projects, currentId });
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [projects, currentId, debouncedSave]);
+
+  const currentProject = projects.find(p => p.id === currentId);
+
+  // ─ Mutazione con history (Punto 8) ─
+  const HISTORY_MAX = 50;
+  const applyMutation = useCallback((mutator) => {
+    setProjects(prev => {
+      historyRef.current.past.push(JSON.parse(JSON.stringify(prev)));
+      if (historyRef.current.past.length > HISTORY_MAX) historyRef.current.past.shift();
+      historyRef.current.future = [];
+      setHistoryTick(t => t + 1);
+      return typeof mutator === 'function' ? mutator(prev) : mutator;
+    });
+  }, []);
+
+  const undo = useCallback(() => {
+    setProjects(prev => {
+      if (!historyRef.current.past.length) return prev;
+      const previous = historyRef.current.past.pop();
+      historyRef.current.future.push(JSON.parse(JSON.stringify(prev)));
+      setHistoryTick(t => t + 1);
+      return previous;
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setProjects(prev => {
+      if (!historyRef.current.future.length) return prev;
+      const next = historyRef.current.future.pop();
+      historyRef.current.past.push(JSON.parse(JSON.stringify(prev)));
+      setHistoryTick(t => t + 1);
+      return next;
+    });
+  }, []);
+
+  // ─ Keyboard shortcuts (Punto 7) ─
+  useEffect(() => {
+    const handler = (e) => {
+      // Non interferire con input editabili (eccetto Esc gestito altrove e Ctrl+Z/Y per undo globale)
+      const isEditable = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault(); undo();
+      } else if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+                 ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault(); redo();
+      } else if (e.key === 'Escape' && confirmState) {
+        setConfirmState(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, redo, confirmState]);
+
+  // ─ Operazioni su progetto ─
+  const updateProject = (updated) => {
+    applyMutation(prev => prev.map(p => p.id === updated.id ? {...updated, updatedAt: new Date().toISOString()} : p));
+  };
+
+  const updateTitle = (title) => {
+    if (!currentProject) return;
+    updateProject({...currentProject, title});
+  };
+
+  const createProjectFromTemplate = (template) => {
+    const p = template.build();
+    applyMutation(prev => [p, ...prev]);
+    setCurrentId(p.id);
+    setView('editor');
+    setTemplatesOpen(false);
+    setToast(`✨ Progetto "${template.name}" creato`);
+  };
+
+  const openNewProjectDialog = () => setTemplatesOpen(true);
+
+  const duplicateProject = (id) => {
+    const orig = projects.find(p => p.id === id);
+    if (!orig) return;
+    const copy = JSON.parse(JSON.stringify(orig));
+    copy.id = uid();
+    copy.title = orig.title + ' (copia)';
+    copy.createdAt = new Date().toISOString();
+    copy.updatedAt = new Date().toISOString();
+    copy.nuclei = copy.nuclei.map(n => ({
+      ...n, id: uid(),
+      tiles: n.tiles.map(t => ({...t, id: uid()}))
+    }));
+    applyMutation(prev => [copy, ...prev]);
+    setCurrentId(copy.id);
+    setToast('📋 Progetto duplicato');
+  };
+
+  // (Punto 5) deleteProject ora usa modal stilizzata invece di confirm()
+  const deleteProject = (id) => {
+    const target = projects.find(p => p.id === id);
+    if (!target) return;
+    setConfirmState({
+      title: 'Eliminare il progetto?',
+      message: <>Stai per eliminare <strong>«{target.title}»</strong>. L'azione può essere annullata con <kbd>Ctrl+Z</kbd> finché la pagina resta aperta.</>,
+      confirmLabel: 'Elimina',
+      danger: true,
+      onConfirm: () => {
+        applyMutation(prev => {
+          const remaining = prev.filter(p => p.id !== id);
+          if (currentId === id) setCurrentId(remaining[0]?.id || null);
+          return remaining;
+        });
+        setConfirmState(null);
+        setToast('🗑 Progetto eliminato');
+      }
+    });
+  };
+
+  // ─ Operazioni su nuclei ─
+  const updateNucleus = (updated) => {
+    if (!currentProject) return;
+    if (updated._moveDir) {
+      const nuclei = [...currentProject.nuclei];
+      const idx = nuclei.findIndex(n => n.id === updated.id);
+      if (idx === -1) return;
+      const newIdx = updated._moveDir === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= nuclei.length) return;
+      [nuclei[idx], nuclei[newIdx]] = [nuclei[newIdx], nuclei[idx]];
+      updateProject({...currentProject, nuclei});
+      return;
+    }
+    updateProject({
+      ...currentProject,
+      nuclei: currentProject.nuclei.map(n => n.id === updated.id ? updated : n)
+    });
+  };
+
+  const addNucleus = () => {
+    if (!currentProject) return;
+    updateProject({
+      ...currentProject,
+      nuclei: [...currentProject.nuclei, {
+        id: uid(), title: `FRASE ${currentProject.nuclei.length + 1}`, tiles: []
+      }]
+    });
+  };
+
+  const deleteNucleus = (id) => {
+    if (!currentProject) return;
+    if (currentProject.nuclei.length <= 1) { setToast('⚠️ Devi avere almeno un nucleo'); return; }
+    setConfirmState({
+      title: 'Eliminare il nucleo?',
+      message: 'Le tessere del nucleo verranno rimosse. Puoi annullare con Ctrl+Z.',
+      confirmLabel: 'Elimina',
+      danger: true,
+      onConfirm: () => {
+        updateProject({...currentProject, nuclei: currentProject.nuclei.filter(n => n.id !== id)});
+        setConfirmState(null);
+      }
+    });
+  };
+
+  // ─ Emoji recenti & libreria tessere (Punti 9 + 23) ─
+  const handleUseRecent = useCallback((emoji) => {
+    setRecentEmojis(prev => {
+      const filtered = prev.filter(e => e !== emoji);
+      const next = [emoji, ...filtered].slice(0, 24);
+      saveRecentEmojis(next);
+      return next;
+    });
+  }, []);
+
+  const handleAddToLibrary = useCallback((tile) => {
+    // Salva solo se la tessera ha word + è significativa
+    if (!tile || !tile.word || tile.word.trim().length < 2) return;
+    if (tile.word === 'Nuova') return;
+    setTileLibrary(prev => {
+      const key = (t) => `${t.color}|${t.emoji}|${t.word}|${t.isText?1:0}`;
+      const k = key(tile);
+      const filtered = prev.filter(t => key(t) !== k);
+      const next = [tile, ...filtered].slice(0, 30);
+      saveTileLibrary(next);
+      return next;
+    });
+  }, []);
+
+  const pickFromLibrary = (libTile) => {
+    if (!currentProject) return;
+    // Aggiunge al primo nucleo o nuovo nucleo se nessuno è presente
+    const targetNuc = currentProject.nuclei[0];
+    const copy = { ...libTile, id: uid() };
+    updateProject({
+      ...currentProject,
+      nuclei: currentProject.nuclei.map((n, i) => i === 0
+        ? { ...n, tiles: [...n.tiles, copy] }
+        : n)
+    });
+    setToast(`➕ Tessera "${libTile.word}" aggiunta a "${targetNuc.title}"`);
+  };
+
+  const clearLibrary = () => {
+    setConfirmState({
+      title: 'Svuotare la libreria tessere?',
+      message: 'Le tessere riutilizzabili verranno rimosse dalla libreria personale.',
+      confirmLabel: 'Svuota',
+      danger: true,
+      onConfirm: () => {
+        setTileLibrary([]);
+        saveTileLibrary([]);
+        setConfirmState(null);
+        setToast('🗑 Libreria svuotata');
+      }
+    });
+  };
+
+  // ─ Esportazione ─
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify({ projects, schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `caa-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    setToast('💾 Backup JSON scaricato');
+  };
+
+  const exportCurrentJSON = () => {
+    if (!currentProject) return;
+    const blob = new Blob([JSON.stringify({ projects: [currentProject], schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    setToast('💾 Progetto esportato');
+  };
+
+  const importJSON = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.projects || !Array.isArray(data.projects)) throw new Error('Formato non valido');
+        const imported = data.projects.map(p => ({
+          ...p, id: uid(),
+          nuclei: (p.nuclei || []).map(n => ({
+            ...n, id: uid(),
+            tiles: (n.tiles || []).map(t => ({...t, id: uid()}))
+          }))
+        }));
+        applyMutation(prev => [...imported, ...prev]);
+        if (imported[0]) setCurrentId(imported[0].id);
+        setToast(`✅ Importati ${imported.length} progetto/i`);
+      } catch (err) { setToast('❌ File non valido'); }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const handlePrint = () => { setView('preview'); setTimeout(() => window.print(), 250); };
+
+  // PDF: ora vettoriale (Punti 19 + 21)
+  const handlePdfExport = async () => {
+    if (!currentProject) return;
+    setExporting(true);
+    setToast('🔄 Generazione PDF vettoriale...');
+    try {
+      await new Promise(r => setTimeout(r, 50)); // lascia UI aggiornare
+      await exportVectorPDF(currentProject);
+      setToast('✅ PDF vettoriale scaricato');
+    } catch (err) {
+      console.error(err);
+      setToast('❌ Errore PDF: ' + (err.message || 'sconosciuto'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePngExport = async () => {
+    if (!currentProject) return;
+    setView('preview');
+    setExporting(true);
+    setToast('🔄 Generazione immagine...');
+    // Preload OpenMoji per le emoji del progetto
+    const uniqueEmojis = [...new Set(
+      currentProject.nuclei.flatMap(n => n.tiles.filter(t => !t.isText).map(t => t.emoji)).filter(Boolean)
+    )];
+    await preloadOpenmoji(uniqueEmojis, 6);
+    await new Promise(r => setTimeout(r, 500)); // attendi rendering React
+    try {
+      const { blob, scale } = await exportPNGSized(currentProject);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setToast(`🖼 PNG scaricato (scala ${scale}×, ${(blob.size/1024).toFixed(0)} KB)`);
+    } catch (err) {
+      console.error(err);
+      setToast('❌ Errore esportazione PNG');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ─ Filtro progetti (Punto 9: ricerca/filtro) ─
+  const filteredProjects = useMemo(() => {
+    const q = projectSearch.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter(p =>
+      (p.title || '').toLowerCase().includes(q) ||
+      (p.nuclei || []).some(n => (n.title || '').toLowerCase().includes(q))
+    );
+  }, [projects, projectSearch]);
+
+  const canUndo = historyRef.current.past.length > 0;
+  const canRedo = historyRef.current.future.length > 0;
+
+  // ════════════ RENDER ════════════
+  return (
+    <div>
+      <header className="app-header">
+        <div className="app-title">
+          <span className="icon" aria-hidden="true">🟦🟡🟢</span>
+          <span>Inclusia <span style={{fontWeight:500, color:'#888', fontSize:12}}>Editor CAA</span></span>
+        </div>
+        <div className="header-actions">
+          <div className="undo-redo">
+            <button className="btn btn-icon btn-secondary" onClick={undo} disabled={!canUndo} title="Annulla (Ctrl+Z)" aria-label="Annulla">↶</button>
+            <button className="btn btn-icon btn-secondary" onClick={redo} disabled={!canRedo} title="Ripeti (Ctrl+Y)" aria-label="Ripeti">↷</button>
+          </div>
+          <button className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} title="Importa">📥 Importa</button>
+          <input ref={fileInputRef} type="file" accept="application/json" onChange={importJSON} style={{display: 'none'}} />
+          <button className="btn btn-secondary btn-small" onClick={exportJSON} title="Backup JSON di tutti i progetti">💾 Backup</button>
+        </div>
+      </header>
+
+      <nav className="tab-nav" role="tablist">
+        <button
+          className={`tab-btn ${view === 'projects' ? 'active' : ''}`}
+          onClick={() => setView('projects')}
+          role="tab" aria-selected={view === 'projects'}
+        >📁 Progetti ({projects.length})</button>
+        <button
+          className={`tab-btn ${view === 'editor' ? 'active' : ''}`}
+          onClick={() => setView('editor')} disabled={!currentProject}
+          role="tab" aria-selected={view === 'editor'}
+        >✏️ Editor</button>
+        <button
+          className={`tab-btn ${view === 'preview' ? 'active' : ''}`}
+          onClick={() => setView('preview')} disabled={!currentProject}
+          role="tab" aria-selected={view === 'preview'}
+        >👁 Anteprima</button>
+      </nav>
+
+      <main className="app-main">
+        {/* ── PROGETTI ── */}
+        {view === 'projects' && (
+          <div className="panel editor-only">
+            <div className="panel-title">
+              <span>I tuoi progetti</span>
+              <button className="btn btn-primary btn-small" onClick={openNewProjectDialog}>+ Nuovo progetto</button>
+            </div>
+            <input
+              type="text"
+              className="project-search"
+              placeholder="🔍 Cerca per titolo o nucleo…"
+              value={projectSearch}
+              onChange={e => setProjectSearch(e.target.value)}
+              aria-label="Cerca progetti"
+            />
+            {projects.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon" aria-hidden="true">📂</div>
+                <div className="empty-state-text">Nessun progetto. Creane uno per iniziare.</div>
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon" aria-hidden="true">🔍</div>
+                <div className="empty-state-text">Nessun progetto corrisponde a «{projectSearch}»</div>
+              </div>
+            ) : (
+              <div className="project-list">
+                {filteredProjects.map(p => (
+                  <div
+                    key={p.id}
+                    className={`project-card ${p.id === currentId ? 'active' : ''}`}
+                    onClick={() => { setCurrentId(p.id); setView('editor'); }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setCurrentId(p.id), setView('editor'))}
+                  >
+                    <div className="project-card-title">{p.title}</div>
+                    <div className="project-card-meta">
+                      <span>{p.nuclei.length} frase/i</span>
+                      <span>{fmtDate(p.updatedAt)}</span>
+                    </div>
+                    <div className="project-card-actions" onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-secondary btn-small" onClick={() => duplicateProject(p.id)} aria-label="Duplica">📋</button>
+                      <button className="btn btn-secondary btn-small" onClick={(e) => { e.stopPropagation(); setCurrentId(p.id); exportCurrentJSON(); }} aria-label="Esporta">💾</button>
+                      <button className="btn btn-danger btn-small" onClick={() => deleteProject(p.id)} aria-label="Elimina">🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="help-tip" style={{marginTop: 16}}>
+              💡 I tuoi progetti sono salvati automaticamente nel browser (con un breve ritardo per non rallentare la digitazione). Per portarli su un altro dispositivo usa <strong>💾 Backup</strong>.
+              <br/>⌨️ Scorciatoie: <kbd>Ctrl+Z</kbd> annulla, <kbd>Ctrl+Y</kbd> ripeti, <kbd>Esc</kbd> chiude i pannelli.
+            </div>
+          </div>
+        )}
+
+        {/* ── EDITOR ── */}
+        {view === 'editor' && currentProject && (
+          <>
+            <div className="panel editor-only">
+              <input
+                type="text"
+                className="title-input"
+                value={currentProject.title}
+                onChange={e => updateTitle(e.target.value)}
+                placeholder="Titolo del testo originale"
+                aria-label="Titolo del progetto"
+              />
+              <div className="help-tip">
+                💡 Tocca una tessera per modificarla, premi <kbd>Canc</kbd> per eliminarla. Ogni colore corrisponde a una categoria grammaticale (Codice di Fitzgerald). Il salvataggio è automatico e differito (~300 ms).
+              </div>
+              {currentProject.nuclei.map((nucleus) => (
+                <NucleusBlock
+                  key={nucleus.id}
+                  nucleus={nucleus}
+                  onUpdate={updateNucleus}
+                  onDelete={() => deleteNucleus(nucleus.id)}
+                  isOnly={currentProject.nuclei.length <= 1}
+                  recentEmojis={recentEmojis}
+                  onUseRecent={handleUseRecent}
+                  onAddToLibrary={handleAddToLibrary}
+                />
+              ))}
+              <button className="btn btn-primary" onClick={addNucleus} style={{marginTop: 8}}>
+                + Aggiungi frase / nucleo
+              </button>
+            </div>
+
+            <div className="panel editor-only">
+              <div className="panel-title">
+                <span>📚 Libreria tessere ({tileLibrary.length})</span>
+              </div>
+              <TileLibrary library={tileLibrary} onPick={pickFromLibrary} onClear={clearLibrary} />
+            </div>
+
+            <div className="panel editor-only">
+              <div className="panel-title">Esporta</div>
+              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 PDF vettoriale</button>
+                <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 PNG</button>
+                <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
+                <button className="btn btn-secondary" onClick={exportCurrentJSON}>💾 JSON progetto</button>
+              </div>
+              <div style={{marginTop: 10, fontSize: 11, color: '#888'}}>
+                Il PDF è ora <strong>vettoriale</strong>: titoli e parole sono selezionabili/ricercabili, ogni nucleo non viene mai spezzato a metà tra due pagine.
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── ANTEPRIMA ── */}
+        {view === 'preview' && currentProject && (
+          <>
+            <div className="panel editor-only" style={{display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center'}}>
+              <div style={{flex: 1, fontSize: 13, color: '#666'}}>
+                Ecco come apparirà la tavola stampata o esportata.
+              </div>
+              <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 PDF</button>
+              <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 PNG</button>
+              <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
+            </div>
+            <PreviewView project={currentProject} />
+          </>
+        )}
+
+        {!currentProject && view !== 'projects' && (
+          <div className="panel">
+            <div className="empty-state">
+              <div className="empty-state-icon" aria-hidden="true">🎨</div>
+              <div className="empty-state-text">Nessun progetto attivo. Vai a "Progetti" per crearne uno.</div>
+              <button className="btn btn-primary" onClick={openNewProjectDialog} style={{marginTop: 12}}>+ Crea il primo progetto</button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <TemplatesModal
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onSelect={createProjectFromTemplate}
+      />
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmLabel={confirmState?.confirmLabel}
+        danger={confirmState?.danger}
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
+
+      <Toast message={toast} onDone={() => setToast('')} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
+</script>
+</body>
+</html>
+

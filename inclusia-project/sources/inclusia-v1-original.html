@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F2F2F0">
+<title>Editor CAA — Comunicazione Aumentativa e Alternativa</title>
+
+<!-- Librerie CDN per app standalone (niente installazione locale richiesta) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #F2F2F0;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ═══ HEADER ═══ */
+  .app-header {
+    background: #ffffff;
+    border-bottom: 1px solid #E0E0E0;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-wrap: wrap;
+  }
+  .app-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #333;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-title .icon { font-size: 22px; }
+  .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ═══ BOTTONI ═══ */
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: #1565C0; color: white; }
+  .btn-primary:hover { background: #0D47A1; }
+  .btn-secondary { background: #ECEFF1; color: #455A64; }
+  .btn-secondary:hover { background: #CFD8DC; }
+  .btn-danger { background: #FFEBEE; color: #C62828; }
+  .btn-danger:hover { background: #FFCDD2; }
+  .btn-success { background: #E8F5E9; color: #2E7D32; }
+  .btn-success:hover { background: #C8E6C9; }
+  .btn-icon {
+    width: 32px; height: 32px; padding: 0;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .btn-small { padding: 6px 10px; font-size: 12px; }
+
+  /* ═══ NAVIGAZIONE TAB (mobile) ═══ */
+  .tab-nav {
+    display: flex;
+    background: #ffffff;
+    border-bottom: 1px solid #E0E0E0;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .tab-btn.active { color: #1565C0; border-bottom-color: #1565C0; }
+  .tab-btn:hover { color: #1565C0; }
+
+  /* ═══ MAIN CONTENT ═══ */
+  .app-main {
+    flex: 1;
+    padding: 16px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ═══ PANNELLO PROGETTI ═══ */
+  .panel {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .project-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .project-card {
+    border: 2px solid #E0E0E0;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: white;
+  }
+  .project-card:hover { border-color: #1565C0; transform: translateY(-1px); }
+  .project-card.active { border-color: #1565C0; background: #E3F2FD; }
+  .project-card-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #333;
+    word-break: break-word;
+  }
+  .project-card-meta {
+    font-size: 11px;
+    color: #888;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .project-card-actions { display: flex; gap: 4px; margin-top: 8px; }
+
+  /* ═══ EDITOR ═══ */
+  .title-input {
+    width: 100%;
+    border: none;
+    border-bottom: 2px solid #E0E0E0;
+    padding: 10px 4px;
+    font-size: 18px;
+    font-weight: 700;
+    background: transparent;
+    color: #333;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 16px;
+  }
+  .title-input:focus { border-bottom-color: #1565C0; }
+
+  .nucleus-block {
+    background: #FAFAFA;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border: 1px solid #EEEEEE;
+  }
+  .nucleus-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .nucleus-title-input {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid #DDDDDD;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: inherit;
+    background: white;
+    outline: none;
+  }
+  .nucleus-title-input:focus { border-color: #1565C0; }
+
+  /* ═══ TESSERE — modalità editing ═══ */
+  .tiles-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 12px;
+  }
+  .tile-edit {
+    width: 110px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .tile-edit:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .tile-edit.selected { box-shadow: 0 0 0 3px #1565C0; }
+  .tile-emoji-area {
+    padding: 14px 8px 10px;
+    text-align: center;
+    font-size: 42px;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+  }
+  .tile-emoji-area.text-mode {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.25;
+    padding: 10px 6px;
+  }
+  .tile-label {
+    padding: 8px 5px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 9.5px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.35;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
+  }
+  .tile-delete-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #C62828;
+    color: white;
+    border: 2px solid white;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 5;
+  }
+  .tile-edit:hover .tile-delete-btn,
+  .tile-edit.selected .tile-delete-btn { display: flex; }
+
+  .add-tile-btn {
+    width: 110px;
+    height: 108px;
+    border: 2px dashed #BBBBBB;
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 32px;
+    color: #999;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .add-tile-btn:hover { border-color: #1565C0; color: #1565C0; background: rgba(21, 101, 192, 0.05); }
+
+  /* ═══ COLORI FITZGERALD (uguali nell'editor e nell'anteprima) ═══ */
+  .fitz-grigio  { background: #F5F5F5; }
+  .fitz-grigio  .tile-emoji-area, .fitz-grigio  .preview-tile-emoji { background: #F5F5F5; }
+  .fitz-grigio  .tile-label, .fitz-grigio  .preview-tile-label { background: #9E9E9E; }
+  .fitz-giallo  { background: #FFFDE7; }
+  .fitz-giallo  .tile-emoji-area, .fitz-giallo  .preview-tile-emoji { background: #FFFDE7; }
+  .fitz-giallo  .tile-label, .fitz-giallo  .preview-tile-label { background: #F9A825; }
+  .fitz-arancio { background: #FFF8E1; }
+  .fitz-arancio .tile-emoji-area, .fitz-arancio .preview-tile-emoji { background: #FFF8E1; }
+  .fitz-arancio .tile-label, .fitz-arancio .preview-tile-label { background: #EF6C00; }
+  .fitz-verde   { background: #F1F8E9; }
+  .fitz-verde   .tile-emoji-area, .fitz-verde   .preview-tile-emoji { background: #F1F8E9; }
+  .fitz-verde   .tile-label, .fitz-verde   .preview-tile-label { background: #388E3C; }
+  .fitz-blu     { background: #E3F2FD; }
+  .fitz-blu     .tile-emoji-area, .fitz-blu     .preview-tile-emoji { background: #E3F2FD; }
+  .fitz-blu     .tile-label, .fitz-blu     .preview-tile-label { background: #1565C0; }
+  .fitz-viola   { background: #F3E5F5; }
+  .fitz-viola   .tile-emoji-area, .fitz-viola   .preview-tile-emoji { background: #F3E5F5; }
+  .fitz-viola   .tile-label, .fitz-viola   .preview-tile-label { background: #7B1FA2; }
+  .fitz-rosa    { background: #FCE4EC; }
+  .fitz-rosa    .tile-emoji-area, .fitz-rosa    .preview-tile-emoji { background: #FCE4EC; }
+  .fitz-rosa    .tile-label, .fitz-rosa    .preview-tile-label { background: #C2185B; }
+
+  /* Testo colorato in tessere "testo" (no emoji) */
+  .fitz-grigio.text-mode .tile-emoji-area, .fitz-grigio.text-mode .preview-tile-emoji   { color: #555; }
+  .fitz-giallo.text-mode .tile-emoji-area, .fitz-giallo.text-mode .preview-tile-emoji   { color: #F9A825; }
+  .fitz-arancio.text-mode .tile-emoji-area, .fitz-arancio.text-mode .preview-tile-emoji { color: #EF6C00; font-style: italic; }
+  .fitz-verde.text-mode .tile-emoji-area, .fitz-verde.text-mode .preview-tile-emoji     { color: #388E3C; }
+  .fitz-blu.text-mode .tile-emoji-area, .fitz-blu.text-mode .preview-tile-emoji         { color: #1565C0; }
+  .fitz-viola.text-mode .tile-emoji-area, .fitz-viola.text-mode .preview-tile-emoji     { color: #7B1FA2; }
+  .fitz-rosa.text-mode .tile-emoji-area, .fitz-rosa.text-mode .preview-tile-emoji       { color: #C2185B; }
+
+  /* ═══ EDITOR DI TESSERA SELEZIONATA ═══ */
+  .tile-editor-panel {
+    background: #FFFBEB;
+    border: 2px solid #F9A825;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .tile-editor-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .tile-editor-row:last-child { margin-bottom: 0; }
+  .tile-editor-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    min-width: 80px;
+  }
+  .text-input {
+    border: 1px solid #DDD;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: white;
+    outline: none;
+    flex: 1;
+    min-width: 100px;
+  }
+  .text-input:focus { border-color: #1565C0; }
+
+  /* ═══ SELETTORE COLORE ═══ */
+  .color-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+  .color-chip {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid white;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 0 0 1px #DDD;
+  }
+  .color-chip:hover { transform: scale(1.1); }
+  .color-chip.selected { box-shadow: 0 0 0 2px #333; transform: scale(1.05); }
+
+  .toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    user-select: none;
+  }
+  .toggle-switch input { display: none; }
+  .toggle-track {
+    width: 38px;
+    height: 22px;
+    background: #CCC;
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-track { background: #1565C0; }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+  /* ═══ EMOJI PICKER MODAL ═══ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #E0E0E0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-body { padding: 12px; overflow-y: auto; flex: 1; }
+
+  .emoji-search {
+    width: 100%;
+    border: 1px solid #DDD;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-family: inherit;
+    outline: none;
+  }
+  .emoji-category {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 14px 0 6px;
+  }
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 4px;
+  }
+  .emoji-btn {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: #F5F5F5;
+    cursor: pointer;
+    font-size: 26px;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .emoji-btn:hover { background: #E3F2FD; border-color: #1565C0; transform: scale(1.05); }
+
+  /* ═══ ANTEPRIMA / STAMPA ═══ */
+  .preview-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .preview-doc-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .preview-legenda {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .preview-legenda-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #777;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .preview-legenda-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .preview-nucleus { margin-bottom: 36px; }
+  .preview-nucleus-title {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .preview-tiles-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .preview-tile {
+    width: 110px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    flex-shrink: 0;
+  }
+  .preview-tile-emoji {
+    padding: 14px 8px 10px;
+    text-align: center;
+    font-size: 42px;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-tile.text-mode .preview-tile-emoji {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.25;
+    padding: 10px 6px;
+  }
+  .preview-tile-label {
+    padding: 8px 5px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 9.5px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.35;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
+  }
+
+  /* ═══ STATO VUOTO ═══ */
+  .empty-state {
+    text-align: center;
+    padding: 40px 16px;
+    color: #999;
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-text { font-size: 14px; }
+
+  /* ═══ TOAST ═══ */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 200;
+    animation: toastIn 0.2s ease-out;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  /* ═══ HELP TIP ═══ */
+  .help-tip {
+    background: #E3F2FD;
+    border-left: 4px solid #1565C0;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #455A64;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  /* ═══ MOBILE ═══ */
+  @media (max-width: 600px) {
+    .app-main { padding: 10px; }
+    .panel { padding: 14px; }
+    .app-title { font-size: 14px; }
+    .app-title .icon { font-size: 18px; }
+    .btn { padding: 8px 11px; font-size: 12px; }
+    .btn-icon { width: 30px; height: 30px; }
+    .tile-edit, .preview-tile, .add-tile-btn { width: 92px; }
+    .add-tile-btn { height: 96px; }
+    .tile-emoji-area, .preview-tile-emoji { font-size: 34px; min-height: 64px; padding: 10px 6px 8px; }
+    .tile-label, .preview-tile-label { font-size: 8.5px; padding: 6px 4px; min-height: 30px; }
+    .tile-emoji-area.text-mode, .preview-tile.text-mode .preview-tile-emoji { font-size: 14px; }
+    .preview-container { padding: 18px 10px; }
+    .nucleus-block { padding: 12px 10px; }
+    .header-actions { gap: 4px; }
+  }
+
+  /* ═══ STAMPA / PDF ═══ */
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: white; }
+    .app-header, .tab-nav, .panel:not(.print-area), .editor-only, .help-tip { display: none !important; }
+    .app-main { padding: 0; max-width: none; }
+    .preview-container { box-shadow: none; padding: 0; border-radius: 0; }
+    .preview-tile { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+    .preview-nucleus { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ════════════════════════════════════════════════════════════
+// DATI: COLORI FITZGERALD
+// ════════════════════════════════════════════════════════════
+const FITZGERALD = [
+  { key: 'grigio',  name: 'Articolo / Pronome / Preposizione', label: '#9E9E9E' },
+  { key: 'giallo',  name: 'Sostantivo',                         label: '#F9A825' },
+  { key: 'arancio', name: 'Nome proprio',                       label: '#EF6C00' },
+  { key: 'verde',   name: 'Verbo',                              label: '#388E3C' },
+  { key: 'blu',     name: 'Aggettivo / Avverbio',               label: '#1565C0' },
+  { key: 'viola',   name: 'Tempo',                              label: '#7B1FA2' },
+  { key: 'rosa',    name: 'Congiunzione / Connettivo',          label: '#C2185B' },
+];
+
+// ════════════════════════════════════════════════════════════
+// DIZIONARIO EMOJICODE — categorizzato per facilitare la scelta
+// ════════════════════════════════════════════════════════════
+const EMOJI_DICT = {
+  'Persone e ruoli': ['👤','👨','👩','🧒','👴','👵','👑','🤴','👸','👨‍🏫','👩‍🏫','✝️','🪖','⚔️','👨‍⚖️','🧙','👨‍🎨','🧑‍🌾','👨‍🍳','🧑‍🎓','👨‍💼','🧑‍🔧'],
+  'Verbi / Azioni':  ['✍️','📖','🗣️','👂','👀','🤔','🏃','🚶','🛌','🍽️','💤','🙏','🏗️','⚔️','🎓','🌱','💀','😂','😢','💑','🤝','🎵','🎤','🎭','🏆','🚀','🛐'],
+  'Oggetti culturali': ['📚','📜','📝','🏷️','📕','📗','📘','📙','📓','✒️','🖋️','🎨','🖼️','🏺','🎭','🎼','🎻','🎹','🎤','📰','💌','🎬','🗿'],
+  'Edifici e luoghi': ['🏠','🏛️','🏫','⛪','🕌','🕍','🏰','🏯','🏟️','🌍','🌎','🗺️','🏙️','🏞️','🏔️','🏖️','🏝️','🏕️','📍','🚪','🪟','🛣️'],
+  'Tempo': ['⌛','⏳','⏰','🕐','📅','📆','🗓️','➡️','⬅️','🔄','🌅','🌄','🌃','🌙','☀️','🌟'],
+  'Connettivi / Logica': ['➕','❌','❓','❗','↔️','⚡','🔀','✅','⛔','💡','🎯','♻️'],
+  'Concetti astratti': ['💭','💖','💔','😨','😡','😱','🌟','🔥','💧','🌊','🕊️','🦅','🌈','🎭','⚖️','🗝️','🔓','🔒','💎'],
+  'Natura': ['🌱','🌳','🌲','🌴','🌵','🌷','🌸','🌹','🌻','🍀','🍃','🍂','🐦','🐺','🦁','🐎','🐂','🐑','🐍','🦋'],
+  'Numeri / Simboli': ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','💯','#️⃣','✖️','➖','💲','€'],
+};
+
+// Tutte le emoji per la ricerca
+const ALL_EMOJIS = Object.values(EMOJI_DICT).flat();
+
+// ════════════════════════════════════════════════════════════
+// UTILITÀ
+// ════════════════════════════════════════════════════════════
+const uid = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+const STORAGE_KEY = 'caa_editor_data_v1';
+const SCHEMA_VERSION = 1;
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.schemaVersion !== SCHEMA_VERSION) return null;
+    return parsed;
+  } catch (e) {
+    console.error('Errore lettura localStorage:', e);
+    return null;
+  }
+}
+
+function saveToStorage(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...data,
+      schemaVersion: SCHEMA_VERSION,
+      lastSaved: new Date().toISOString()
+    }));
+    return true;
+  } catch (e) {
+    console.error('Errore scrittura localStorage:', e);
+    return false;
+  }
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+// Progetto vuoto di default
+function emptyProject(title = 'Nuova tavola CAA') {
+  return {
+    id: uid(),
+    title,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    nuclei: [
+      {
+        id: uid(),
+        title: 'FRASE 1',
+        tiles: []
+      }
+    ]
+  };
+}
+
+// Progetto esempio per nuovi utenti
+function exampleProject() {
+  return {
+    id: uid(),
+    title: 'Esempio: Summa Theologiae',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    nuclei: [
+      {
+        id: uid(),
+        title: 'FRASE 1 – IDENTIFICAZIONE',
+        tiles: [
+          { id: uid(), color: 'grigio',  emoji: '👆', word: 'Questo',           isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',             isText: false },
+          { id: uid(), color: 'verde',   emoji: '🏷️', word: 'Si chiama',         isText: false },
+          { id: uid(), color: 'arancio', emoji: 'Summa\nTheologiae', word: 'Summa Theologiae', isText: true },
+        ]
+      },
+      {
+        id: uid(),
+        title: 'FRASE 2 – AUTORE',
+        tiles: [
+          { id: uid(), color: 'arancio', emoji: '✝️', word: "San Tommaso d'Aquino", isText: false },
+          { id: uid(), color: 'verde',   emoji: '✍️', word: 'Ha scritto',           isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',                isText: false },
+        ]
+      },
+      {
+        id: uid(),
+        title: 'FRASE 3 – TEMPO',
+        tiles: [
+          { id: uid(), color: 'viola', emoji: '⌛', word: 'Tanto tempo fa', isText: false },
+          { id: uid(), color: 'viola', emoji: 'XIII\nsecolo', word: '1200', isText: true },
+        ]
+      }
+    ]
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: TESSERA EDITABILE
+// ════════════════════════════════════════════════════════════
+function TileEdit({ tile, isSelected, onClick, onDelete }) {
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    onDelete();
+  };
+  return (
+    <div
+      className={`tile-edit fitz-${tile.color} ${tile.isText ? 'text-mode' : ''} ${isSelected ? 'selected' : ''}`}
+      onClick={onClick}
+    >
+      <button className="tile-delete-btn" onClick={handleDelete} aria-label="Elimina tessera">×</button>
+      <div className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`}>
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : tile.emoji}
+      </div>
+      <div className="tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: TESSERA ANTEPRIMA (per stampa/PDF)
+// ════════════════════════════════════════════════════════════
+function PreviewTile({ tile }) {
+  return (
+    <div className={`preview-tile fitz-${tile.color} ${tile.isText ? 'text-mode' : ''}`}>
+      <div className="preview-tile-emoji">
+        {tile.isText
+          ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
+          : tile.emoji}
+      </div>
+      <div className="preview-tile-label">{tile.word || '—'}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: EMOJI PICKER MODAL
+// ════════════════════════════════════════════════════════════
+function EmojiPicker({ open, onClose, onSelect }) {
+  const [search, setSearch] = useState('');
+  const [customInput, setCustomInput] = useState('');
+
+  if (!open) return null;
+
+  const filtered = search.trim()
+    ? Object.entries(EMOJI_DICT).reduce((acc, [cat, emojis]) => {
+        const filt = emojis.filter(e => e.includes(search));
+        if (filt.length) acc[cat] = filt;
+        return acc;
+      }, {})
+    : EMOJI_DICT;
+
+  const handleSelect = (emoji) => {
+    onSelect(emoji);
+    onClose();
+  };
+
+  const handleCustomConfirm = () => {
+    if (customInput.trim()) {
+      onSelect(customInput.trim());
+      setCustomInput('');
+      onClose();
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">Scegli emoji o testo</div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap'}}>
+            <input
+              type="text"
+              className="text-input"
+              placeholder="✏️ Emoji o testo personalizzato (es. XIII secolo)"
+              value={customInput}
+              onChange={e => setCustomInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCustomConfirm()}
+              style={{flex: 1, minWidth: 200}}
+            />
+            <button className="btn btn-primary" onClick={handleCustomConfirm}>Usa</button>
+          </div>
+          <input
+            type="text"
+            className="emoji-search"
+            placeholder="🔍 Cerca emoji"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {Object.entries(filtered).map(([category, emojis]) => (
+            <div key={category}>
+              <div className="emoji-category">{category}</div>
+              <div className="emoji-grid">
+                {emojis.map((emoji, i) => (
+                  <button key={i} className="emoji-btn" onClick={() => handleSelect(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: EDITOR DI TESSERA SELEZIONATA
+// ════════════════════════════════════════════════════════════
+function TileEditorPanel({ tile, onUpdate, onClose }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const handleEmojiSelect = (emoji) => {
+    // Se contiene a-zA-Z o spazi multipli o > 4 chars → modalità testo
+    const isText = /[a-zA-Zàèìòù\s]/.test(emoji) || emoji.length > 4;
+    onUpdate({ ...tile, emoji, isText });
+  };
+
+  return (
+    <div className="tile-editor-panel">
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Colore</div>
+        <div className="color-selector">
+          {FITZGERALD.map(f => (
+            <div
+              key={f.key}
+              className={`color-chip ${tile.color === f.key ? 'selected' : ''}`}
+              style={{background: f.label}}
+              onClick={() => onUpdate({...tile, color: f.key})}
+              title={f.name}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Pittogramma</div>
+        <button className="btn btn-secondary" onClick={() => setPickerOpen(true)}>
+          {tile.isText ? '📝 Testo' : '😀 Emoji'} • Cambia
+        </button>
+        <span style={{fontSize: 28, marginLeft: 4}}>
+          {tile.isText ? <span style={{fontSize: 13, color: '#666'}}>«{tile.emoji.replace(/\n/g,' ')}»</span> : tile.emoji}
+        </span>
+      </div>
+      <div className="tile-editor-row">
+        <div className="tile-editor-label">Parola CAA</div>
+        <input
+          type="text"
+          className="text-input"
+          value={tile.word}
+          onChange={e => onUpdate({...tile, word: e.target.value})}
+          placeholder="Parola sotto la tessera"
+        />
+      </div>
+      <div className="tile-editor-row" style={{justifyContent: 'flex-end'}}>
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={tile.isText}
+            onChange={e => onUpdate({...tile, isText: e.target.checked})}
+          />
+          <span className="toggle-track"></span>
+          Modalità testo
+        </label>
+        <button className="btn btn-secondary btn-small" onClick={onClose}>Fine</button>
+      </div>
+      <EmojiPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={handleEmojiSelect} />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: NUCLEUS BLOCK (un nucleo)
+// ════════════════════════════════════════════════════════════
+function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly }) {
+  const [selectedTileId, setSelectedTileId] = useState(null);
+
+  const updateNucleusTitle = (title) => onUpdate({...nucleus, title});
+
+  const addTile = () => {
+    const newTile = {
+      id: uid(),
+      color: 'giallo',
+      emoji: '📚',
+      word: 'Nuova',
+      isText: false
+    };
+    onUpdate({...nucleus, tiles: [...nucleus.tiles, newTile]});
+    setSelectedTileId(newTile.id);
+  };
+
+  const updateTile = (updated) => {
+    onUpdate({
+      ...nucleus,
+      tiles: nucleus.tiles.map(t => t.id === updated.id ? updated : t)
+    });
+  };
+
+  const deleteTile = (tileId) => {
+    onUpdate({
+      ...nucleus,
+      tiles: nucleus.tiles.filter(t => t.id !== tileId)
+    });
+    if (selectedTileId === tileId) setSelectedTileId(null);
+  };
+
+  const moveNucleusUp = () => onUpdate({...nucleus, _moveDir: 'up'});
+  const moveNucleusDown = () => onUpdate({...nucleus, _moveDir: 'down'});
+
+  const selectedTile = nucleus.tiles.find(t => t.id === selectedTileId);
+
+  return (
+    <div className="nucleus-block">
+      <div className="nucleus-header">
+        <input
+          type="text"
+          className="nucleus-title-input"
+          value={nucleus.title}
+          onChange={e => updateNucleusTitle(e.target.value)}
+          placeholder="Titolo del nucleo"
+        />
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusUp} title="Sposta su">↑</button>
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusDown} title="Sposta giù">↓</button>
+        {!isOnly && (
+          <button className="btn btn-icon btn-danger" onClick={onDelete} title="Elimina nucleo">🗑</button>
+        )}
+      </div>
+      <div className="tiles-container">
+        {nucleus.tiles.map(tile => (
+          <TileEdit
+            key={tile.id}
+            tile={tile}
+            isSelected={tile.id === selectedTileId}
+            onClick={() => setSelectedTileId(tile.id === selectedTileId ? null : tile.id)}
+            onDelete={() => deleteTile(tile.id)}
+          />
+        ))}
+        <button className="add-tile-btn" onClick={addTile} title="Aggiungi tessera">+</button>
+      </div>
+      {selectedTile && (
+        <TileEditorPanel
+          tile={selectedTile}
+          onUpdate={updateTile}
+          onClose={() => setSelectedTileId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: ANTEPRIMA (vista stampa)
+// ════════════════════════════════════════════════════════════
+function PreviewView({ project }) {
+  if (!project) return null;
+  return (
+    <div id="preview-content" className="preview-container">
+      <div className="preview-doc-title">{project.title}</div>
+      <div className="preview-legenda">
+        {FITZGERALD.map(f => (
+          <div key={f.key} className="preview-legenda-item">
+            <div className="preview-legenda-dot" style={{background: f.label}}></div>
+            {f.name.split('/')[0].trim()}
+          </div>
+        ))}
+      </div>
+      {project.nuclei.map(nucleus => (
+        <div key={nucleus.id} className="preview-nucleus">
+          <div className="preview-nucleus-title">{nucleus.title}</div>
+          <div className="preview-tiles-row">
+            {nucleus.tiles.map(tile => <PreviewTile key={tile.id} tile={tile} />)}
+            {nucleus.tiles.length === 0 && (
+              <div style={{color: '#bbb', fontSize: 12, fontStyle: 'italic'}}>(nucleo vuoto)</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: TOAST
+// ════════════════════════════════════════════════════════════
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, [message, onDone]);
+  return message ? <div className="toast">{message}</div> : null;
+}
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE: APP PRINCIPALE
+// ════════════════════════════════════════════════════════════
+function App() {
+  const [projects, setProjects] = useState([]);
+  const [currentId, setCurrentId] = useState(null);
+  const [view, setView] = useState('editor');
+  const [toast, setToast] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const previewRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const initialized = useRef(false);
+
+  // Caricamento iniziale dal localStorage
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    const data = loadFromStorage();
+    if (data && data.projects && data.projects.length > 0) {
+      setProjects(data.projects);
+      setCurrentId(data.currentId || data.projects[0].id);
+    } else {
+      // Prima volta: crea progetto esempio
+      const example = exampleProject();
+      setProjects([example]);
+      setCurrentId(example.id);
+    }
+  }, []);
+
+  // Salvataggio automatico ad ogni cambiamento
+  useEffect(() => {
+    if (!initialized.current || projects.length === 0) return;
+    saveToStorage({ projects, currentId });
+  }, [projects, currentId]);
+
+  const currentProject = projects.find(p => p.id === currentId);
+
+  // ── Operazioni su progetto ──────────────────────────────
+  const updateProject = (updated) => {
+    setProjects(prev => prev.map(p => p.id === updated.id ? {...updated, updatedAt: new Date().toISOString()} : p));
+  };
+
+  const updateTitle = (title) => {
+    if (!currentProject) return;
+    updateProject({...currentProject, title});
+  };
+
+  const createProject = () => {
+    const p = emptyProject();
+    setProjects(prev => [p, ...prev]);
+    setCurrentId(p.id);
+    setView('editor');
+    setToast('✨ Nuovo progetto creato');
+  };
+
+  const duplicateProject = (id) => {
+    const orig = projects.find(p => p.id === id);
+    if (!orig) return;
+    const copy = JSON.parse(JSON.stringify(orig));
+    copy.id = uid();
+    copy.title = orig.title + ' (copia)';
+    copy.createdAt = new Date().toISOString();
+    copy.updatedAt = new Date().toISOString();
+    // Rigenera tutti gli ID interni
+    copy.nuclei = copy.nuclei.map(n => ({
+      ...n,
+      id: uid(),
+      tiles: n.tiles.map(t => ({...t, id: uid()}))
+    }));
+    setProjects(prev => [copy, ...prev]);
+    setCurrentId(copy.id);
+    setToast('📋 Progetto duplicato');
+  };
+
+  const deleteProject = (id) => {
+    if (!confirm('Vuoi davvero eliminare questo progetto? Non potrà essere recuperato.')) return;
+    const remaining = projects.filter(p => p.id !== id);
+    setProjects(remaining);
+    if (currentId === id) {
+      setCurrentId(remaining[0]?.id || null);
+    }
+    setToast('🗑 Progetto eliminato');
+  };
+
+  // ── Operazioni su nuclei ────────────────────────────────
+  const updateNucleus = (updated) => {
+    if (!currentProject) return;
+    if (updated._moveDir) {
+      const nuclei = [...currentProject.nuclei];
+      const idx = nuclei.findIndex(n => n.id === updated.id);
+      if (idx === -1) return;
+      const newIdx = updated._moveDir === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= nuclei.length) return;
+      [nuclei[idx], nuclei[newIdx]] = [nuclei[newIdx], nuclei[idx]];
+      updateProject({...currentProject, nuclei});
+      return;
+    }
+    updateProject({
+      ...currentProject,
+      nuclei: currentProject.nuclei.map(n => n.id === updated.id ? updated : n)
+    });
+  };
+
+  const addNucleus = () => {
+    if (!currentProject) return;
+    const newNuc = {
+      id: uid(),
+      title: `FRASE ${currentProject.nuclei.length + 1}`,
+      tiles: []
+    };
+    updateProject({
+      ...currentProject,
+      nuclei: [...currentProject.nuclei, newNuc]
+    });
+  };
+
+  const deleteNucleus = (id) => {
+    if (!currentProject) return;
+    if (currentProject.nuclei.length <= 1) {
+      setToast('⚠️ Devi avere almeno un nucleo');
+      return;
+    }
+    updateProject({
+      ...currentProject,
+      nuclei: currentProject.nuclei.filter(n => n.id !== id)
+    });
+  };
+
+  // ── Esportazione ────────────────────────────────────────
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify({ projects, schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `caa-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('💾 Backup JSON scaricato');
+  };
+
+  const exportCurrentJSON = () => {
+    if (!currentProject) return;
+    const blob = new Blob([JSON.stringify({ projects: [currentProject], schemaVersion: SCHEMA_VERSION }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('💾 Progetto esportato');
+  };
+
+  const importJSON = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.projects || !Array.isArray(data.projects)) {
+          throw new Error('Formato non valido');
+        }
+        // Rigenera ID per evitare conflitti
+        const imported = data.projects.map(p => ({
+          ...p,
+          id: uid(),
+          nuclei: (p.nuclei || []).map(n => ({
+            ...n,
+            id: uid(),
+            tiles: (n.tiles || []).map(t => ({...t, id: uid()}))
+          }))
+        }));
+        setProjects(prev => [...imported, ...prev]);
+        if (imported[0]) setCurrentId(imported[0].id);
+        setToast(`✅ Importati ${imported.length} progetto/i`);
+      } catch (err) {
+        setToast('❌ File non valido');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  // ── Stampa & PDF ────────────────────────────────────────
+  const handlePrint = () => {
+    setView('preview');
+    setTimeout(() => window.print(), 250);
+  };
+
+  const handlePdfExport = async () => {
+    if (!currentProject) return;
+    setView('preview');
+    setExporting(true);
+    setToast('🔄 Generazione PDF in corso...');
+
+    // Aspetta che React renderizzi la preview
+    await new Promise(r => setTimeout(r, 400));
+
+    try {
+      const element = document.getElementById('preview-content');
+      if (!element) throw new Error('Preview non trovata');
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        windowWidth: Math.max(element.scrollWidth, 800)
+      });
+
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+
+      // PDF A4 orizzontale per ospitare le tessere larghe
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgRatio = canvas.width / canvas.height;
+      const pageRatio = pdfWidth / pdfHeight;
+
+      let drawW, drawH;
+      if (imgRatio > pageRatio) {
+        // immagine più larga → riempi orizzontalmente
+        drawW = pdfWidth - 20;
+        drawH = drawW / imgRatio;
+      } else {
+        drawH = pdfHeight - 20;
+        drawW = drawH * imgRatio;
+      }
+      const x = (pdfWidth - drawW) / 2;
+      const y = (pdfHeight - drawH) / 2;
+
+      // Se il contenuto è più alto di una pagina, dividilo
+      if (drawH > pdfHeight - 20) {
+        // Multi-page: aggiungiamo pagine successive
+        const pageHeightPx = (pdfHeight - 20) * (canvas.width / drawW);
+        let yOffset = 0;
+        let pageNum = 0;
+        while (yOffset < canvas.height) {
+          if (pageNum > 0) pdf.addPage();
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = Math.min(pageHeightPx, canvas.height - yOffset);
+          const ctx = pageCanvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(canvas, 0, -yOffset);
+          pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 10, 10, pdfWidth - 20, (pageCanvas.height / canvas.width) * (pdfWidth - 20));
+          yOffset += pageHeightPx;
+          pageNum++;
+        }
+      } else {
+        pdf.addImage(imgData, 'PNG', x, y, drawW, drawH);
+      }
+
+      pdf.save(`${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+      setToast('✅ PDF scaricato');
+    } catch (err) {
+      console.error(err);
+      setToast('❌ Errore PDF: usa "Stampa" come alternativa');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePngExport = async () => {
+    if (!currentProject) return;
+    setView('preview');
+    setExporting(true);
+    setToast('🔄 Generazione immagine...');
+    await new Promise(r => setTimeout(r, 400));
+    try {
+      const element = document.getElementById('preview-content');
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false
+      });
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setToast('🖼 PNG scaricato');
+      });
+    } catch (err) {
+      setToast('❌ Errore esportazione');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ════════════ RENDER ════════════
+  return (
+    <div>
+      <header className="app-header">
+        <div className="app-title">
+          <span className="icon">🟦🟡🟢</span>
+          <span>Editor CAA</span>
+        </div>
+        <div className="header-actions">
+          <button className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} title="Importa">
+            📥 Importa
+          </button>
+          <input ref={fileInputRef} type="file" accept="application/json" onChange={importJSON} style={{display: 'none'}} />
+          <button className="btn btn-secondary btn-small" onClick={exportJSON} title="Backup JSON di tutti i progetti">
+            💾 Backup
+          </button>
+        </div>
+      </header>
+
+      <nav className="tab-nav">
+        <button className={`tab-btn ${view === 'projects' ? 'active' : ''}`} onClick={() => setView('projects')}>
+          📁 Progetti ({projects.length})
+        </button>
+        <button className={`tab-btn ${view === 'editor' ? 'active' : ''}`} onClick={() => setView('editor')} disabled={!currentProject}>
+          ✏️ Editor
+        </button>
+        <button className={`tab-btn ${view === 'preview' ? 'active' : ''}`} onClick={() => setView('preview')} disabled={!currentProject}>
+          👁 Anteprima
+        </button>
+      </nav>
+
+      <main className="app-main">
+        {/* ── VISTA PROGETTI ── */}
+        {view === 'projects' && (
+          <div className="panel editor-only">
+            <div className="panel-title">
+              <span>I tuoi progetti</span>
+              <button className="btn btn-primary btn-small" onClick={createProject}>+ Nuovo</button>
+            </div>
+            {projects.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">📂</div>
+                <div className="empty-state-text">Nessun progetto. Creane uno per iniziare.</div>
+              </div>
+            ) : (
+              <div className="project-list">
+                {projects.map(p => (
+                  <div key={p.id} className={`project-card ${p.id === currentId ? 'active' : ''}`} onClick={() => { setCurrentId(p.id); setView('editor'); }}>
+                    <div className="project-card-title">{p.title}</div>
+                    <div className="project-card-meta">
+                      <span>{p.nuclei.length} frase/i</span>
+                      <span>{fmtDate(p.updatedAt)}</span>
+                    </div>
+                    <div className="project-card-actions" onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-secondary btn-small" onClick={() => duplicateProject(p.id)}>📋</button>
+                      <button className="btn btn-secondary btn-small" onClick={(e) => { e.stopPropagation(); setCurrentId(p.id); exportCurrentJSON(); }}>💾</button>
+                      <button className="btn btn-danger btn-small" onClick={() => deleteProject(p.id)}>🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="help-tip" style={{marginTop: 16}}>
+              💡 I tuoi progetti sono salvati automaticamente nel browser. Per portarli su un altro dispositivo o non perderli quando cambi browser, usa il pulsante <strong>💾 Backup</strong> in alto.
+            </div>
+          </div>
+        )}
+
+        {/* ── VISTA EDITOR ── */}
+        {view === 'editor' && currentProject && (
+          <>
+            <div className="panel editor-only">
+              <input
+                type="text"
+                className="title-input"
+                value={currentProject.title}
+                onChange={e => updateTitle(e.target.value)}
+                placeholder="Titolo del testo originale"
+              />
+              <div className="help-tip">
+                💡 Tocca una tessera per modificarla. Ogni colore corrisponde a una categoria grammaticale (Codice di Fitzgerald). Il salvataggio è automatico.
+              </div>
+              {currentProject.nuclei.map((nucleus, idx) => (
+                <NucleusBlock
+                  key={nucleus.id}
+                  nucleus={nucleus}
+                  onUpdate={updateNucleus}
+                  onDelete={() => deleteNucleus(nucleus.id)}
+                  isOnly={currentProject.nuclei.length <= 1}
+                />
+              ))}
+              <button className="btn btn-primary" onClick={addNucleus} style={{marginTop: 8}}>
+                + Aggiungi frase / nucleo
+              </button>
+            </div>
+
+            <div className="panel editor-only">
+              <div className="panel-title">Esporta</div>
+              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 Scarica PDF</button>
+                <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 Scarica PNG</button>
+                <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
+                <button className="btn btn-secondary" onClick={exportCurrentJSON}>💾 JSON progetto</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── VISTA ANTEPRIMA ── */}
+        {view === 'preview' && currentProject && (
+          <>
+            <div className="panel editor-only" style={{display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center'}}>
+              <div style={{flex: 1, fontSize: 13, color: '#666'}}>
+                Ecco come apparirà la tavola stampata o esportata.
+              </div>
+              <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 PDF</button>
+              <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 PNG</button>
+              <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
+            </div>
+            <PreviewView project={currentProject} />
+          </>
+        )}
+
+        {!currentProject && view !== 'projects' && (
+          <div className="panel">
+            <div className="empty-state">
+              <div className="empty-state-icon">🎨</div>
+              <div className="empty-state-text">Nessun progetto attivo. Vai a "Progetti" per crearne uno.</div>
+              <button className="btn btn-primary" onClick={createProject} style={{marginTop: 12}}>+ Crea il primo progetto</button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <Toast message={toast} onDone={() => setToast('')} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
