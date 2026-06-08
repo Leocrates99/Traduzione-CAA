@@ -1,0 +1,20 @@
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Build artifacts (output dei script in build/, non versionati)
+build/arasaac_vocab_full.json
+build/vocab_italiano_caa_estesa.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Backup automatici
+*.backup
+*.bak

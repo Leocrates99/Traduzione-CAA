@@ -1,0 +1,47 @@
+name: Deploy Inclusia to GitHub Pages
+
+# Pubblica automaticamente l'editor CAA su GitHub Pages ad ogni push su main.
+# Niente build step: index.html + cartelle build/ e sources/ vengono caricati
+# così come sono (singolo file HTML, librerie da CDN).
+#
+# ⚙️  Requisito UNA-TANTUM (già fatto, ma in caso di reset del repo):
+#     Settings ▸ Pages ▸ "Build and deployment" ▸ Source = "GitHub Actions"
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione alla volta; cancella i job in coda obsoleti
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Carica tutta la root del repo: index.html + build/ + sources/
+          # (sources/ può essere escluso se vuoi ridurre dimensione: vedi sotto)
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
