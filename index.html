@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -111,8 +112,61 @@
   }
   .nucleus-title-input:focus { border-color: #1565C0; }
 
+  /* BODY TEXT (frase intera del nucleo) */
+  .nucleus-body {
+    width: 100%;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    border: 1px solid #DDDDDD;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    color: #333;
+    outline: none;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 40px;
+  }
+  .nucleus-body:focus { border-color: #1565C0; box-shadow: 0 0 0 2px rgba(21,101,192,0.1); }
+  .nucleus-body::placeholder { color: #BBB; font-style: italic; }
+
   /* TESSERE */
   .tiles-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+  .tiles-container.is-dragging { background: rgba(21,101,192,0.04); border-radius: 8px; }
+
+  /* DRAG HANDLE su tessera */
+  .tile-drag-handle {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #455A64;
+    color: white;
+    border: 2px solid white;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: grab;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .tile-drag-handle:active { cursor: grabbing; background: #263238; }
+  .tile-edit:hover .tile-drag-handle,
+  .tile-edit.selected .tile-drag-handle,
+  .tile-edit:focus-visible .tile-drag-handle { display: flex; }
+
+  /* Stati durante il drag (Sortable) */
+  .tile-edit.sortable-ghost { opacity: 0.35; transform: rotate(-2deg); }
+  .tile-edit.sortable-chosen { box-shadow: 0 6px 18px rgba(21,101,192,0.4) !important; transform: scale(1.03); }
+  .tile-edit.sortable-drag { opacity: 0.85; }
   .tile-edit {
     width: 110px; border-radius: 12px; overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.12); background: white;
@@ -267,7 +321,8 @@
   .preview-legenda-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #777; font-weight: 600; letter-spacing: 0.3px; }
   .preview-legenda-dot { width: 12px; height: 12px; border-radius: 50%; }
   .preview-nucleus { margin-bottom: 36px; }
-  .preview-nucleus-title { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; color: #999; text-transform: uppercase; margin-bottom: 14px; }
+  .preview-nucleus-title { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+  .preview-nucleus-body { text-align: center; font-size: 13px; color: #555; margin: 0 auto 14px; max-width: 80%; line-height: 1.5; font-style: italic; }
   .preview-tiles-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: flex-end; }
   .preview-tile { width: 110px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); flex-shrink: 0; }
   .preview-tile-emoji { padding: 14px 8px 10px; text-align: center; font-size: 42px; min-height: 74px; display: flex; align-items: center; justify-content: center; }
@@ -677,7 +732,7 @@ function emptyProject(title = 'Nuova tavola CAA') {
     id: uid(), title,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    nuclei: [{ id: uid(), title: 'FRASE 1', tiles: [] }]
+    nuclei: [{ id: uid(), title: 'FRASE 1', body: '', tiles: [] }]
   };
 }
 
@@ -686,21 +741,27 @@ function exampleProject() {
     id: uid(), title: 'Esempio: Summa Theologiae',
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     nuclei: [
-      { id: uid(), title: 'FRASE 1 – IDENTIFICAZIONE', tiles: [
-        { id: uid(), color: 'grigio',  emoji: '👆', word: 'Questo',          isText: false },
-        { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',           isText: false },
-        { id: uid(), color: 'verde',   emoji: '🏷️', word: 'Si chiama',       isText: false },
-        { id: uid(), color: 'arancio', emoji: 'Summa\nTheologiae', word: 'Summa Theologiae', isText: true },
-      ]},
-      { id: uid(), title: 'FRASE 2 – AUTORE', tiles: [
-        { id: uid(), color: 'arancio', emoji: '✝️', word: "San Tommaso d'Aquino", isText: false },
-        { id: uid(), color: 'verde',   emoji: '✍️', word: 'Ha scritto',           isText: false },
-        { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',                isText: false },
-      ]},
-      { id: uid(), title: 'FRASE 3 – TEMPO', tiles: [
-        { id: uid(), color: 'viola', emoji: '⌛', word: 'Tanto tempo fa', isText: false },
-        { id: uid(), color: 'viola', emoji: 'XIII\nsecolo', word: '1200', isText: true },
-      ]}
+      { id: uid(), title: 'FRASE 1 – IDENTIFICAZIONE',
+        body: 'Questo libro si chiama "Summa Theologiae".',
+        tiles: [
+          { id: uid(), color: 'grigio',  emoji: '👆', word: 'Questo',          isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',           isText: false },
+          { id: uid(), color: 'verde',   emoji: '🏷️', word: 'Si chiama',       isText: false },
+          { id: uid(), color: 'arancio', emoji: 'Summa\nTheologiae', word: 'Summa Theologiae', isText: true },
+        ]},
+      { id: uid(), title: 'FRASE 2 – AUTORE',
+        body: "Lo ha scritto San Tommaso d'Aquino.",
+        tiles: [
+          { id: uid(), color: 'arancio', emoji: '✝️', word: "San Tommaso d'Aquino", isText: false },
+          { id: uid(), color: 'verde',   emoji: '✍️', word: 'Ha scritto',           isText: false },
+          { id: uid(), color: 'giallo',  emoji: '📚', word: 'Libro',                isText: false },
+        ]},
+      { id: uid(), title: 'FRASE 3 – TEMPO',
+        body: 'Lo ha scritto tanto tempo fa, nel XIII secolo (anno 1200 circa).',
+        tiles: [
+          { id: uid(), color: 'viola', emoji: '⌛', word: 'Tanto tempo fa', isText: false },
+          { id: uid(), color: 'viola', emoji: 'XIII\nsecolo', word: '1200', isText: true },
+        ]}
     ]
   };
 }
@@ -711,7 +772,12 @@ function buildPlaceholderNucleus(title, count) {
   for (let i = 0; i < count; i++) {
     tiles.push({ id: uid(), color: 'giallo', emoji: '📚', word: `Parola ${i+1}`, isText: false });
   }
-  return { id: uid(), title, tiles };
+  return { id: uid(), title, body: '', tiles };
+}
+
+// Normalizza nuclei caricati da localStorage o JSON import (back-compat: body opzionale)
+function normalizeNucleus(n) {
+  return { body: '', ...n };
 }
 
 // (Punto 10) Templates per nuovo progetto
@@ -886,7 +952,7 @@ function TemplatesModal({ open, onClose, onSelect }) {
 /* ════════════════════════════════════════════════════════════
    TESSERE
    ════════════════════════════════════════════════════════════ */
-function TileEdit({ tile, isSelected, onClick, onDelete, tabIndex=0 }) {
+function TileEdit({ tile, isSelected, onClick, onDelete, onMove, tabIndex=0 }) {
   const handleDelete = (e) => { e.stopPropagation(); onDelete(); };
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -895,19 +961,33 @@ function TileEdit({ tile, isSelected, onClick, onDelete, tabIndex=0 }) {
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       onDelete();
+    } else if (e.key === 'ArrowLeft' && onMove) {
+      e.preventDefault(); onMove(-1);
+    } else if (e.key === 'ArrowRight' && onMove) {
+      e.preventDefault(); onMove(+1);
     }
   };
+  // Stop drag propagation sui bottoni (così non avviano il drag della tessera)
+  const stopDrag = (e) => e.stopPropagation();
   return (
     <div
       className={`tile-edit fitz-${tile.color} ${tile.isText ? 'text-mode' : ''} ${isSelected ? 'selected' : ''}`}
+      data-tile-id={tile.id}
       onClick={onClick}
       onKeyDown={handleKey}
       tabIndex={tabIndex}
       role="button"
-      aria-label={`Tessera: ${tile.word || 'senza parola'}, colore ${tile.color}${isSelected ? ', selezionata' : ''}`}
+      aria-label={`Tessera: ${tile.word || 'senza parola'}, colore ${tile.color}${isSelected ? ', selezionata' : ''}. Premi frecce sinistra/destra per spostarla.`}
       aria-pressed={isSelected}
     >
-      <button className="tile-delete-btn" onClick={handleDelete} aria-label="Elimina tessera" tabIndex={-1}>×</button>
+      <span
+        className="tile-drag-handle js-drag-handle"
+        title="Trascina per riordinare"
+        aria-label="Trascina per riordinare la tessera"
+        onClick={stopDrag}
+        onMouseDown={stopDrag}
+      >⠿</span>
+      <button className="tile-delete-btn" onClick={handleDelete} onMouseDown={stopDrag} aria-label="Elimina tessera" tabIndex={-1}>×</button>
       <div className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`} aria-hidden="true">
         {tile.isText
           ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
@@ -1380,8 +1460,11 @@ function TileEditorPanel({ tile, onUpdate, onClose, recentEmojis, onUseRecent })
    ════════════════════════════════════════════════════════════ */
 function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUseRecent, onAddToLibrary }) {
   const [selectedTileId, setSelectedTileId] = useState(null);
+  const tilesContainerRef = useRef(null);
+  const sortableRef = useRef(null);
 
   const updateNucleusTitle = (title) => onUpdate({...nucleus, title});
+  const updateNucleusBody = (body) => onUpdate({...nucleus, body});
 
   const addTile = () => {
     const newTile = { id: uid(), color: 'giallo', emoji: '📚', word: 'Nuova', isText: false };
@@ -1391,7 +1474,6 @@ function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUse
 
   const updateTile = (updated) => {
     onUpdate({ ...nucleus, tiles: nucleus.tiles.map(t => t.id === updated.id ? updated : t) });
-    // Quando una tessera viene modificata in modo significativo, la salvo in libreria
     onAddToLibrary(updated);
   };
 
@@ -1400,10 +1482,55 @@ function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUse
     if (selectedTileId === tileId) setSelectedTileId(null);
   };
 
+  // Riordina via tastiera (←/→) sulla tessera
+  const moveTile = (tileId, delta) => {
+    const idx = nucleus.tiles.findIndex(t => t.id === tileId);
+    if (idx === -1) return;
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= nucleus.tiles.length) return;
+    const newTiles = [...nucleus.tiles];
+    [newTiles[idx], newTiles[newIdx]] = [newTiles[newIdx], newTiles[idx]];
+    onUpdate({...nucleus, tiles: newTiles});
+  };
+
   const moveNucleusUp = () => onUpdate({...nucleus, _moveDir: 'up'});
   const moveNucleusDown = () => onUpdate({...nucleus, _moveDir: 'down'});
 
   const selectedTile = nucleus.tiles.find(t => t.id === selectedTileId);
+
+  // ─ Sortable.js: drag-to-reorder delle tessere ─
+  useEffect(() => {
+    if (!tilesContainerRef.current || typeof Sortable === 'undefined') return;
+    sortableRef.current = Sortable.create(tilesContainerRef.current, {
+      animation: 180,
+      handle: '.js-drag-handle',
+      filter: '.add-tile-btn,.tile-delete-btn',
+      preventOnFilter: false,
+      draggable: '.tile-edit',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      forceFallback: false,
+      onStart: () => { tilesContainerRef.current?.classList.add('is-dragging'); },
+      onEnd: (evt) => {
+        tilesContainerRef.current?.classList.remove('is-dragging');
+        if (evt.oldIndex === evt.newIndex) return;
+        // Ricostruisci l'ordine dal DOM e propaga allo stato React
+        const newOrderIds = Array.from(tilesContainerRef.current.children)
+          .filter(el => el.classList.contains('tile-edit'))
+          .map(el => el.dataset.tileId);
+        const idToTile = Object.fromEntries(nucleus.tiles.map(t => [t.id, t]));
+        const newTiles = newOrderIds.map(id => idToTile[id]).filter(Boolean);
+        if (newTiles.length === nucleus.tiles.length) {
+          onUpdate({...nucleus, tiles: newTiles});
+        }
+      }
+    });
+    return () => {
+      sortableRef.current?.destroy();
+      sortableRef.current = null;
+    };
+  }, [nucleus.tiles, onUpdate]);
 
   return (
     <div className="nucleus-block">
@@ -1413,16 +1540,24 @@ function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUse
           className="nucleus-title-input"
           value={nucleus.title}
           onChange={e => updateNucleusTitle(e.target.value)}
-          placeholder="Titolo del nucleo"
+          placeholder="Titolo del nucleo (es. FRASE 1)"
           aria-label="Titolo del nucleo"
         />
-        <button className="btn btn-icon btn-secondary" onClick={moveNucleusUp} title="Sposta su" aria-label="Sposta nucleo su">↑</button>
-        <button className="btn btn-icon btn-secondary" onClick={moveNucleusDown} title="Sposta giù" aria-label="Sposta nucleo giù">↓</button>
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusUp} title="Sposta nucleo su" aria-label="Sposta nucleo su">↑</button>
+        <button className="btn btn-icon btn-secondary" onClick={moveNucleusDown} title="Sposta nucleo giù" aria-label="Sposta nucleo giù">↓</button>
         {!isOnly && (
           <button className="btn btn-icon btn-danger" onClick={onDelete} title="Elimina nucleo" aria-label="Elimina nucleo">🗑</button>
         )}
       </div>
-      <div className="tiles-container">
+      <textarea
+        className="nucleus-body"
+        value={nucleus.body || ''}
+        onChange={e => updateNucleusBody(e.target.value)}
+        placeholder="Frase intera in corpo testo (opzionale). Esempio: «Mario va a scuola in autobus.»"
+        aria-label="Frase intera del nucleo"
+        rows={2}
+      />
+      <div className="tiles-container" ref={tilesContainerRef}>
         {nucleus.tiles.map(tile => (
           <TileEdit
             key={tile.id}
@@ -1430,6 +1565,7 @@ function NucleusBlock({ nucleus, onUpdate, onDelete, isOnly, recentEmojis, onUse
             isSelected={tile.id === selectedTileId}
             onClick={() => setSelectedTileId(tile.id === selectedTileId ? null : tile.id)}
             onDelete={() => deleteTile(tile.id)}
+            onMove={(delta) => moveTile(tile.id, delta)}
           />
         ))}
         <button className="add-tile-btn" onClick={addTile} title="Aggiungi tessera" aria-label="Aggiungi tessera">+</button>
@@ -1504,6 +1640,9 @@ function PreviewView({ project }) {
       {project.nuclei.map(nucleus => (
         <div key={nucleus.id} className="preview-nucleus">
           <div className="preview-nucleus-title">{nucleus.title}</div>
+          {nucleus.body && nucleus.body.trim() && (
+            <div className="preview-nucleus-body">«{nucleus.body}»</div>
+          )}
           <div className="preview-tiles-row">
             {nucleus.tiles.map(tile => <PreviewTile key={tile.id} tile={tile} />)}
             {nucleus.tiles.length === 0 && (
@@ -1717,7 +1856,14 @@ async function exportVectorPDF(project) {
     const tilesPerRow = Math.max(1, Math.floor((contentW + TILE_GAP) / (TILE_W + TILE_GAP)));
     const rows = Math.max(1, Math.ceil((nucleus.tiles.length || 1) / tilesPerRow));
     const tilesBlockH = rows * TILE_H + (rows - 1) * ROW_GAP;
-    const neededH = NUCLEUS_TITLE_H + tilesBlockH + NUCLEUS_GAP;
+    const hasBody = nucleus.body && nucleus.body.trim();
+    // Stima altezza body (text wrapping)
+    const bodyText = hasBody ? `«${nucleus.body.trim()}»` : '';
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(9);
+    const bodyLines = hasBody ? pdf.splitTextToSize(bodyText, contentW * 0.85) : [];
+    const bodyH = hasBody ? (bodyLines.length * 3.6 + 2) : 0;
+    const neededH = NUCLEUS_TITLE_H + bodyH + tilesBlockH + NUCLEUS_GAP;
 
     // Se non c'entra nello spazio residuo, nuova pagina (Punto 21)
     if (cursorY + neededH > pageH - margin) {
@@ -1731,6 +1877,17 @@ async function exportVectorPDF(project) {
     pdf.setTextColor(135);
     pdf.text((nucleus.title || '').toUpperCase(), pageW / 2, cursorY + 4, { align: 'center' });
     cursorY += NUCLEUS_TITLE_H;
+
+    // Body (frase intera) se presente
+    if (hasBody) {
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(9);
+      pdf.setTextColor(95);
+      bodyLines.forEach((line, i) => {
+        pdf.text(line, pageW / 2, cursorY + 2 + i * 3.6, { align: 'center' });
+      });
+      cursorY += bodyH;
+    }
 
     // Tessere
     if (nucleus.tiles.length === 0) {
@@ -1958,13 +2115,17 @@ async function exportPPTX(project) {
   const SLIDE_H = 5.625;
   const MARGIN_X = 0.4;
   const TITLE_Y = 0.18;
-  const TITLE_H = 0.55;
-  const TILES_TOP = TITLE_Y + TITLE_H + 0.15;
+  const TITLE_H = 0.45;
+  const BODY_H_BASE = 0.45;     // altezza body se presente
   const MARGIN_BOTTOM = 0.25;
 
   for (const nucleus of project.nuclei) {
     const slide = pres.addSlide({ masterName: 'INCLUSIA_EMPTY' });
     slide.background = { color: 'FFFFFF', transparency: 100 };
+
+    const hasBody = nucleus.body && nucleus.body.trim();
+    const bodyH = hasBody ? BODY_H_BASE : 0;
+    const TILES_TOP = TITLE_Y + TITLE_H + (hasBody ? bodyH + 0.1 : 0.1);
 
     // Titolo nucleo
     slide.addText(nucleus.title || '', {
@@ -1974,6 +2135,18 @@ async function exportPPTX(project) {
       fontFace: 'Helvetica',
       charSpacing: 3
     });
+
+    // Body (frase intera) se presente
+    if (hasBody) {
+      slide.addText('«' + nucleus.body.trim() + '»', {
+        x: MARGIN_X + 0.5, y: TITLE_Y + TITLE_H + 0.02,
+        w: SLIDE_W - 2 * MARGIN_X - 1.0, h: bodyH,
+        fontSize: 14, italic: true, color: '666666',
+        align: 'center', valign: 'middle',
+        fontFace: 'Helvetica',
+        autoFit: true
+      });
+    }
 
     const tiles = nucleus.tiles;
     if (tiles.length === 0) {
@@ -2063,8 +2236,13 @@ function App() {
     initialized.current = true;
     const data = loadFromStorage();
     if (data && data.projects && data.projects.length > 0) {
-      setProjects(data.projects);
-      setCurrentId(data.currentId || data.projects[0].id);
+      // Migrate: assicura body presente sui nuclei
+      const migrated = data.projects.map(p => ({
+        ...p,
+        nuclei: (p.nuclei || []).map(normalizeNucleus)
+      }));
+      setProjects(migrated);
+      setCurrentId(data.currentId || migrated[0].id);
     } else {
       const example = exampleProject();
       setProjects([example]);
@@ -2228,7 +2406,7 @@ function App() {
     updateProject({
       ...currentProject,
       nuclei: [...currentProject.nuclei, {
-        id: uid(), title: `FRASE ${currentProject.nuclei.length + 1}`, tiles: []
+        id: uid(), title: `FRASE ${currentProject.nuclei.length + 1}`, body: '', tiles: []
       }]
     });
   };
@@ -2332,7 +2510,7 @@ function App() {
         const imported = data.projects.map(p => ({
           ...p, id: uid(),
           nuclei: (p.nuclei || []).map(n => ({
-            ...n, id: uid(),
+            body: '', ...n, id: uid(),
             tiles: (n.tiles || []).map(t => ({...t, id: uid()}))
           }))
         }));
