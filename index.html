@@ -12,6 +12,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -1813,6 +1814,228 @@ async function exportPNGSized(project, previewElementId='preview-content') {
 }
 
 /* ════════════════════════════════════════════════════════════
+   EXPORT POWERPOINT (PPTX)
+   ─ 1 slide per nucleo (= 1 "frase")
+   ─ 16:9 widescreen (25.4 × 14.3 cm = 10" × 5.625")
+   ─ Sfondo slide trasparente (noFill via master vuoto)
+   ─ Tessere mantengono colori Fitzgerald
+   ─ Emoji come SVG OpenMoji embedded → veri vettoriali in PowerPoint 2019+
+   ─ Layout adattivo: <8 tessere = riga unica; ≥8 = wrap multirighe
+   ════════════════════════════════════════════════════════════ */
+
+function rgbToHex(rgb) {
+  // [r,g,b] (0-255) → "RRGGBB"
+  return rgb.map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+// Layout adattivo: data una count di tessere, decide righe×colonne ottimali per 16:9
+function computeAdaptiveLayout(n, slideW, slideH, marginTop, marginBottom) {
+  if (n <= 1) return { cols: 1, rows: 1 };
+  // < 8 tessere: una riga sola
+  if (n < 8) return { cols: n, rows: 1 };
+  // ≥ 8: griglia con ratio circa 16:9 dell'area disponibile, e tile aspect 1:1.3
+  const availW = slideW;
+  const availH = slideH - marginTop - marginBottom;
+  // Cerca la griglia (cols, rows) con cols*rows >= n che minimizza spazio sprecato
+  let best = null;
+  for (let cols = 2; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    // Tile size se uso quel layout
+    const tileW = availW / cols;
+    const tileH = availH / rows;
+    // Mantieni aspect 1:1.3 (altezza maggiore di larghezza)
+    // Scegli la min dimensione che rispetta il ratio
+    const effTileW = Math.min(tileW, tileH / 1.3);
+    const effTileH = effTileW * 1.3;
+    // Score: massimizza effTileW
+    if (!best || effTileW > best.effTileW) {
+      best = { cols, rows, effTileW, effTileH };
+    }
+  }
+  return best;
+}
+
+function drawTilePPTX(slide, tile, x, y, w, h) {
+  const labelH = h * 0.30;
+  const emojiH = h - labelH;
+  const bg = FITZ_BG[tile.color] || [255,255,255];
+  const lbl = FITZ_LABEL[tile.color] || [100,100,100];
+  const bgHex = rgbToHex(bg);
+  const lblHex = rgbToHex(lbl);
+
+  // Sfondo area emoji (rettangolo arrotondato)
+  slide.addShape('roundRect', {
+    x, y, w, h: emojiH + 0.02,
+    fill: { color: bgHex },
+    line: { color: 'DDDDDD', width: 0.4 },
+    rectRadius: 0.05
+  });
+
+  // Sfondo label (rettangolo pieno)
+  slide.addShape('rect', {
+    x, y: y + emojiH, w, h: labelH,
+    fill: { color: lblHex },
+    line: { type: 'none' }
+  });
+
+  // Emoji o testo nell'area emoji
+  if (tile.isText) {
+    const lines = tile.emoji.split('\n');
+    slide.addText(lines.join('\n'), {
+      x: x + 0.05, y, w: w - 0.1, h: emojiH,
+      fontSize: Math.max(10, Math.min(20, 18 - lines.length * 2)),
+      bold: true,
+      color: lblHex,
+      align: 'center', valign: 'middle',
+      italic: tile.color === 'arancio',
+      fontFace: 'Helvetica'
+    });
+  } else {
+    const cache = getOpenmojiCache();
+    const svgData = cache[tile.emoji];
+    const emojiSize = Math.min(w * 0.65, emojiH * 0.85);
+    const emojiX = x + (w - emojiSize) / 2;
+    const emojiY = y + (emojiH - emojiSize) / 2;
+    if (svgData) {
+      // SVG OpenMoji embedded = vettoriale puro
+      slide.addImage({
+        data: svgData,
+        x: emojiX, y: emojiY,
+        w: emojiSize, h: emojiSize
+      });
+    } else {
+      // Fallback: emoji come testo Unicode (vettoriale via font)
+      slide.addText(tile.emoji || '', {
+        x, y, w, h: emojiH,
+        fontSize: Math.round(emojiSize * 36),
+        align: 'center', valign: 'middle',
+        fontFace: 'Segoe UI Emoji'
+      });
+    }
+  }
+
+  // Label (parola, bianco grassetto)
+  slide.addText((tile.word || '—').toUpperCase(), {
+    x: x + 0.05, y: y + emojiH, w: w - 0.1, h: labelH,
+    fontSize: Math.max(7, Math.min(11, w * 8)),
+    bold: true,
+    color: 'FFFFFF',
+    align: 'center', valign: 'middle',
+    fontFace: 'Helvetica',
+    autoFit: true
+  });
+}
+
+async function exportPPTX(project) {
+  if (!project) throw new Error('Nessun progetto');
+  if (typeof PptxGenJS === 'undefined') throw new Error('Libreria PptxGenJS non caricata');
+
+  // 1. Preload OpenMoji per tutte le emoji uniche
+  const uniqueEmojis = [...new Set(
+    project.nuclei.flatMap(n => n.tiles.filter(t => !t.isText).map(t => t.emoji)).filter(Boolean)
+  )];
+  await preloadOpenmoji(uniqueEmojis, 6);
+
+  // 2. Crea presentazione 16:9
+  const pres = new PptxGenJS();
+  pres.defineLayout({ name: 'INCLUSIA_169', width: 10, height: 5.625 });
+  pres.layout = 'INCLUSIA_169';
+  pres.title = project.title || 'Tavola CAA';
+  pres.author = 'Inclusia — Editor CAA';
+  pres.company = 'Inclusia';
+
+  // 3. Slide master "trasparente" (noFill)
+  // pptxgenjs non espone direttamente noFill, ma omettendo background si ottiene
+  // il fill del master. Definiamo un master vuoto con transparency 100.
+  pres.defineSlideMaster({
+    title: 'INCLUSIA_EMPTY',
+    background: { color: 'FFFFFF', transparency: 100 },
+    objects: []
+  });
+
+  // 4. Per ogni nucleo, una slide
+  const SLIDE_W = 10;
+  const SLIDE_H = 5.625;
+  const MARGIN_X = 0.4;
+  const TITLE_Y = 0.18;
+  const TITLE_H = 0.55;
+  const TILES_TOP = TITLE_Y + TITLE_H + 0.15;
+  const MARGIN_BOTTOM = 0.25;
+
+  for (const nucleus of project.nuclei) {
+    const slide = pres.addSlide({ masterName: 'INCLUSIA_EMPTY' });
+    slide.background = { color: 'FFFFFF', transparency: 100 };
+
+    // Titolo nucleo
+    slide.addText(nucleus.title || '', {
+      x: MARGIN_X, y: TITLE_Y, w: SLIDE_W - 2 * MARGIN_X, h: TITLE_H,
+      fontSize: 22, bold: true, color: '555555',
+      align: 'center', valign: 'middle',
+      fontFace: 'Helvetica',
+      charSpacing: 3
+    });
+
+    const tiles = nucleus.tiles;
+    if (tiles.length === 0) {
+      slide.addText('(nucleo vuoto)', {
+        x: 1, y: SLIDE_H / 2 - 0.2, w: SLIDE_W - 2, h: 0.4,
+        fontSize: 14, italic: true, color: 'AAAAAA',
+        align: 'center', valign: 'middle'
+      });
+      continue;
+    }
+
+    // Layout adattivo
+    const usableW = SLIDE_W - 2 * MARGIN_X;
+    const usableH = SLIDE_H - TILES_TOP - MARGIN_BOTTOM;
+    const { cols, rows } = computeAdaptiveLayout(tiles.length, usableW, usableH, TILES_TOP, MARGIN_BOTTOM);
+
+    const gapX = 0.12;
+    const gapY = 0.15;
+
+    // Calcola tile size mantenendo aspect 1:1.3
+    const maxTileW = (usableW - (cols - 1) * gapX) / cols;
+    const maxTileH = (usableH - (rows - 1) * gapY) / rows;
+    let tileW, tileH;
+    if (maxTileW * 1.3 <= maxTileH) {
+      tileW = maxTileW;
+      tileH = maxTileW * 1.3;
+    } else {
+      tileH = maxTileH;
+      tileW = maxTileH / 1.3;
+    }
+    // Cap dimensione massima ragionevole per leggibilità
+    tileW = Math.min(tileW, 1.8);
+    tileH = Math.min(tileH, 2.3);
+
+    // Centra il blocco tessere nell'area
+    const blockW = cols * tileW + (cols - 1) * gapX;
+    const blockH = rows * tileH + (rows - 1) * gapY;
+    const startX = MARGIN_X + (usableW - blockW) / 2;
+    const startY = TILES_TOP + (usableH - blockH) / 2;
+
+    // Disponi le tessere — l'ultima riga potrebbe avere meno tessere: centrala
+    let placed = 0;
+    for (let r = 0; r < rows; r++) {
+      const remaining = tiles.length - placed;
+      const tilesThisRow = Math.min(cols, remaining);
+      const rowW = tilesThisRow * tileW + (tilesThisRow - 1) * gapX;
+      const rowStartX = MARGIN_X + (usableW - rowW) / 2;
+      const ty = startY + r * (tileH + gapY);
+      for (let c = 0; c < tilesThisRow; c++) {
+        const tx = rowStartX + c * (tileW + gapX);
+        drawTilePPTX(slide, tiles[placed], tx, ty, tileW, tileH);
+        placed++;
+      }
+    }
+  }
+
+  // 5. Salva
+  const safeName = (project.title || 'tavola_caa').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
+  await pres.writeFile({ fileName: safeName + '.pptx' });
+}
+
+/* ════════════════════════════════════════════════════════════
    APP PRINCIPALE
    ════════════════════════════════════════════════════════════ */
 function App() {
@@ -2169,6 +2392,22 @@ function App() {
     }
   };
 
+  // PowerPoint: 1 slide per nucleo, sfondo trasparente, OpenMoji vettoriale
+  const handlePptxExport = async () => {
+    if (!currentProject) return;
+    setExporting(true);
+    setToast('🔄 Generazione PowerPoint...');
+    try {
+      await exportPPTX(currentProject);
+      setToast(`✅ PowerPoint scaricato (${currentProject.nuclei.length} slide)`);
+    } catch (err) {
+      console.error(err);
+      setToast('❌ Errore PowerPoint: ' + (err.message || 'sconosciuto'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ─ Filtro progetti (Punto 9: ricerca/filtro) ─
   const filteredProjects = useMemo(() => {
     const q = projectSearch.trim().toLowerCase();
@@ -2320,12 +2559,13 @@ function App() {
               <div className="panel-title">Esporta</div>
               <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
                 <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 PDF vettoriale</button>
+                <button className="btn btn-success" onClick={handlePptxExport} disabled={exporting}>📊 PowerPoint</button>
                 <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 PNG</button>
                 <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
                 <button className="btn btn-secondary" onClick={exportCurrentJSON}>💾 JSON progetto</button>
               </div>
               <div style={{marginTop: 10, fontSize: 11, color: '#888'}}>
-                Il PDF è ora <strong>vettoriale</strong>: titoli e parole sono selezionabili/ricercabili, ogni nucleo non viene mai spezzato a metà tra due pagine.
+                <strong>PDF</strong>: vettoriale, paginato per nucleo, parole selezionabili. <strong>PowerPoint</strong>: 1 slide per frase/nucleo (16:9), sfondo trasparente, emoji OpenMoji come SVG vettoriali (qualità nativa in PowerPoint 2019+/M365).
               </div>
             </div>
           </>
@@ -2339,6 +2579,7 @@ function App() {
                 Ecco come apparirà la tavola stampata o esportata.
               </div>
               <button className="btn btn-success" onClick={handlePdfExport} disabled={exporting}>📄 PDF</button>
+              <button className="btn btn-success" onClick={handlePptxExport} disabled={exporting}>📊 PPTX</button>
               <button className="btn btn-success" onClick={handlePngExport} disabled={exporting}>🖼 PNG</button>
               <button className="btn btn-secondary" onClick={handlePrint}>🖨 Stampa</button>
             </div>
