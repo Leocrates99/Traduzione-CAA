@@ -380,6 +380,108 @@
   .vocab-card .vocab-word { font-size: 10px; font-weight: 700; color: #333; line-height: 1.1; word-break: break-word; }
   .vocab-card .no-emoji-badge { position: absolute; top: 2px; right: 4px; font-size: 9px; color: #B45309; }
 
+  /* ═══ IMPORT MODAL (finestra preliminare per testo → CAA) ═══ */
+  .modal-content.modal-large { max-width: 900px; max-height: 92vh; }
+  .import-section {
+    padding: 14px 18px;
+    border-bottom: 1px solid #EEEEEE;
+  }
+  .import-section:last-child { border-bottom: none; }
+  .import-section-title {
+    font-size: 12px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.2px; color: #1565C0; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .import-section-title .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #1565C0; color: white; font-size: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .import-textarea {
+    width: 100%; min-height: 110px; resize: vertical;
+    border: 1px solid #DDD; border-radius: 8px; padding: 10px 12px;
+    font-size: 14px; font-family: inherit; line-height: 1.5;
+    outline: none; background: #FAFAFA;
+  }
+  .import-textarea:focus { border-color: #1565C0; background: white; }
+
+  .sentence-card {
+    background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .sentence-card.committed { background: #E8F5E9; border-color: #66BB6A; opacity: 0.78; }
+  .sentence-card.committed .sentence-num { background: #2E7D32; }
+  .sentence-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .sentence-num {
+    background: #607D8B; color: white; font-weight: 700;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .sentence-original {
+    flex: 1; font-size: 12px; color: #666; font-style: italic;
+    word-break: break-word;
+  }
+  .sentence-simplified {
+    width: 100%; border: 1px solid #DDD; border-radius: 6px;
+    padding: 8px 10px; font-size: 14px; font-family: inherit;
+    background: white; outline: none; resize: vertical; min-height: 38px;
+    line-height: 1.45;
+  }
+  .sentence-simplified:focus { border-color: #1565C0; }
+  .sentence-actions {
+    display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center;
+  }
+
+  /* Token chips */
+  .token-strip {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding: 8px;
+    background: white; border-radius: 8px; border: 1px solid #EEE;
+    min-height: 60px;
+  }
+  .token-chip {
+    display: inline-flex; flex-direction: column; align-items: center;
+    gap: 2px; padding: 6px 8px 4px; border-radius: 8px;
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.12s; font-family: inherit;
+    background: white; min-width: 60px; box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  .token-chip:hover, .token-chip:focus-visible { transform: translateY(-2px); box-shadow: 0 3px 7px rgba(0,0,0,0.16); outline: none; }
+  .token-chip-emoji { font-size: 20px; line-height: 1; min-height: 24px; display: flex; align-items: center; justify-content: center; }
+  .token-chip-emoji.no-emoji { font-size: 10px; color: #999; font-style: italic; }
+  .token-chip-word {
+    font-size: 11px; font-weight: 700; color: white;
+    padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+    letter-spacing: 0.3px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .token-chip.fitz-grigio  { background: rgba(158,158,158,0.10); border-color: rgba(158,158,158,0.5); }
+  .token-chip.fitz-grigio  .token-chip-word { background: #9E9E9E; }
+  .token-chip.fitz-giallo  { background: rgba(249,168,37,0.10); border-color: rgba(249,168,37,0.4); }
+  .token-chip.fitz-giallo  .token-chip-word { background: #F9A825; }
+  .token-chip.fitz-arancio { background: rgba(239,108,0,0.10); border-color: rgba(239,108,0,0.4); }
+  .token-chip.fitz-arancio .token-chip-word { background: #EF6C00; }
+  .token-chip.fitz-verde   { background: rgba(56,142,60,0.10); border-color: rgba(56,142,60,0.4); }
+  .token-chip.fitz-verde   .token-chip-word { background: #388E3C; }
+  .token-chip.fitz-blu     { background: rgba(21,101,192,0.10); border-color: rgba(21,101,192,0.4); }
+  .token-chip.fitz-blu     .token-chip-word { background: #1565C0; }
+  .token-chip.fitz-viola   { background: rgba(123,31,162,0.10); border-color: rgba(123,31,162,0.4); }
+  .token-chip.fitz-viola   .token-chip-word { background: #7B1FA2; }
+  .token-chip.fitz-rosa    { background: rgba(194,24,91,0.10); border-color: rgba(194,24,91,0.4); }
+  .token-chip.fitz-rosa    .token-chip-word { background: #C2185B; }
+  .token-chip.removed { opacity: 0.35; }
+  .token-chip.removed .token-chip-word { text-decoration: line-through; }
+
+  /* Token editor popover */
+  .token-editor {
+    background: #FFFBEB; border: 2px solid #F9A825; border-radius: 8px;
+    padding: 10px; margin-top: 8px;
+  }
+  .token-editor-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .token-editor-row:last-child { margin-bottom: 0; }
+  .token-editor-label { font-size: 11px; font-weight: 700; color: #555; min-width: 70px; }
+
   /* SUGGESTIONS MODAL */
   .suggestions-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
@@ -615,6 +717,155 @@ function textModeSize(text, baseSize, opts = {}) {
     s *= 0.66;
   }
   return Math.max(baseSize * 0.28, Math.min(s, baseSize));
+}
+
+/* ════════════════════════════════════════════════════════════
+   NLP EURISTICO PER L'IMPORT TESTO → CAA
+   ─ Scomposizione frasi, tokenizzazione, classificazione Fitzgerald
+   ─ Tutto locale, nessun servizio esterno
+   ════════════════════════════════════════════════════════════ */
+
+// Liste euristiche minimali per il classificatore italiano
+const ITA_ARTICLES_PREPS = new Set([
+  'il','lo','la','i','gli','le','un','uno','una',
+  "l'","un'","d'","dell'","nell'","sull'","all'","dall'",
+  'di','a','da','in','con','su','per','tra','fra','sopra','sotto','dentro','fuori','presso','verso',
+  'del','dello','della','dei','degli','delle',
+  'al','allo','alla','ai','agli','alle',
+  'dal','dallo','dalla','dai','dagli','dalle',
+  'nel','nello','nella','nei','negli','nelle',
+  'sul','sullo','sulla','sui','sugli','sulle',
+  'col','coi','io','tu','egli','ella','esso','essa','noi','voi','essi','esse','loro',
+  'me','te','sé','mi','ti','si','ci','vi','ne','lo','la','li','le','glielo','gliela',
+  'questo','questa','quello','quella','questi','queste','quelli','quelle',
+  'mio','mia','tuo','tua','suo','sua','nostro','nostra','vostro','vostra',
+  'miei','tuoi','suoi','nostri','vostri','mie','tue','sue','nostre','vostre'
+]);
+
+const ITA_CONNECTIVES = new Set([
+  'e','ed','o','od','ma','però','bensì','tuttavia','infatti','perché','poiché','siccome',
+  'quindi','dunque','allora','pertanto','anche','pure','neppure','nemmeno','neanche',
+  'oppure','ovvero','cioè','infine','inoltre','dapprima','dopodiché',
+  'se','quando','mentre','finché','affinché','benché','sebbene','nonostante','purché',
+  'non','sì','no','forse','certo','certamente','probabilmente','ovviamente',
+  'che','chi','cosa','dove','quando','come','quanto','perché','quale','quali'
+]);
+
+const ITA_TIME = new Set([
+  'oggi','ieri','domani','adesso','ora','prima','dopo','mai','sempre','presto','tardi',
+  'mattina','mattino','pomeriggio','sera','notte','mezzogiorno','mezzanotte','alba','tramonto',
+  'lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica',
+  'gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre',
+  'primavera','estate','autunno','inverno',
+  'secondo','secondi','minuto','minuti','ora','ore','giorno','giorni','settimana','settimane',
+  'mese','mesi','anno','anni','secolo','secoli','millennio','millenni',
+  'recentemente','tempo','epoca','periodo'
+]);
+
+const ITA_VERB_ENDINGS = [
+  'are','ere','ire',                            // infinito
+  'ato','ata','ati','ate','uto','uta','uti','ute','ito','ita','iti','ite',  // participio
+  'ando','endo',                                // gerundio
+  'amo','iamo','ate','ete','ite','ano','ono'   // presente plur/3°
+];
+
+// Split del testo in frasi (mantenendo la punteggiatura finale)
+function splitIntoSentences(text) {
+  if (!text || !text.trim()) return [];
+  // Match: tutto fino al primo terminatore di frase incluso
+  const matches = text.match(/[^.!?;…]+[.!?;…]+|[^.!?;…]+$/g) || [];
+  return matches
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+// Tokenizza una frase in parole, gestendo le elisioni italiane
+function tokenize(sentence) {
+  // Pulisci punteggiatura finale e interna (mantieni apostrofi)
+  const cleaned = sentence
+    .replace(/[.,;:!?…«»""()\[\]]/g, ' ')
+    .replace(/['']/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return [];
+  const rawTokens = cleaned.split(/\s+/);
+  const tokens = [];
+  for (const t of rawTokens) {
+    // Espandi elisioni: "l'amico" → ["l'", "amico"]
+    if (t.includes("'") && !t.endsWith("'") && t.length > 1) {
+      const apoIdx = t.indexOf("'");
+      const prefix = t.slice(0, apoIdx + 1);
+      const suffix = t.slice(apoIdx + 1);
+      // Solo se il prefisso è breve (max 4 char: dell', sull', etc.)
+      if (prefix.length <= 5 && suffix.length > 0) {
+        tokens.push(prefix);
+        tokens.push(suffix);
+        continue;
+      }
+    }
+    tokens.push(t);
+  }
+  return tokens;
+}
+
+// Classifica un token assegnando colore Fitzgerald + emoji suggerita
+function classifyToken(rawWord) {
+  if (!rawWord) return { fitz: 'giallo', emoji: null, source: 'default' };
+  const word = rawWord.trim();
+  if (!word) return { fitz: 'giallo', emoji: null, source: 'default' };
+
+  // Normalizza per lookup: lowercase, mantieni apostrofi/accenti italiani
+  const wLower = word.toLowerCase();
+  const wNoApos = wLower.replace(/'+$/, '');
+
+  // 1. Match esatto nel vocabolario CAA curato (350 voci)
+  const vocabMatch = CAA_VOCAB_BY_WORD[wLower] || CAA_VOCAB_BY_WORD[wNoApos];
+  if (vocabMatch) {
+    return {
+      fitz: vocabMatch.fitz,
+      emoji: vocabMatch.emoji,
+      shortcode: vocabMatch.shortcode,
+      alternative: vocabMatch.alternative,
+      source: 'vocab'
+    };
+  }
+
+  // 2. Liste euristiche
+  if (ITA_ARTICLES_PREPS.has(wLower) || ITA_ARTICLES_PREPS.has(wNoApos)) {
+    return { fitz: 'grigio', emoji: null, source: 'list:articolo' };
+  }
+  if (ITA_CONNECTIVES.has(wLower)) {
+    return { fitz: 'rosa', emoji: null, source: 'list:connettivo' };
+  }
+  if (ITA_TIME.has(wLower)) {
+    return { fitz: 'viola', emoji: '📅', source: 'list:tempo' };
+  }
+
+  // 3. Pattern morfologici
+  // Avverbio in -mente
+  if (/mente$/.test(wLower) && wLower.length > 6) {
+    return { fitz: 'blu', emoji: null, source: 'pattern:avverbio' };
+  }
+  // Verbo in -are/-ere/-ire (infinito) o terminazioni verbali comuni
+  if (wLower.length > 4) {
+    for (const end of ITA_VERB_ENDINGS) {
+      if (wLower.endsWith(end) && wLower.length > end.length + 1) {
+        // Filtra falsi positivi banali (es. "altare" sembra verbo ma è sostantivo)
+        // Heuristic: se finisce in -are/-ere/-ire ma è breve (≤ 6 char) potrebbe essere sost.
+        // Per ora accettiamo: il classificatore è euristico, l'utente può correggere
+        return { fitz: 'verde', emoji: null, source: 'pattern:verbo' };
+      }
+    }
+  }
+
+  // 4. Parola maiuscola (potenziale nome proprio)
+  // Solo se prima lettera maiuscola e non TUTTE maiuscole
+  if (/^[A-ZÀ-Ý][a-zà-ÿ]/.test(word) && word !== word.toUpperCase()) {
+    return { fitz: 'arancio', emoji: null, source: 'pattern:nome-proprio' };
+  }
+
+  // 5. Default: sostantivo
+  return { fitz: 'giallo', emoji: null, source: 'default' };
 }
 
 const STORAGE_KEY = 'caa_editor_data_v1';
@@ -1097,6 +1348,321 @@ function SuggestionsModal({ open, vocabWord, onClose, onPick, onOpenFullPicker }
               onClick={() => onPick({ emoji: vocabWord.parola, word: vocabWord.parola, isText: true })}
             >📝 Usa come testo</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   IMPORT MODAL — finestra preliminare per la trasformazione
+   testo originale → frasi → token → nuclei CAA.
+   ─ Completamente isolata dall'area di lavoro principale.
+   ─ Aggiunge nuovi nuclei al progetto via onAddNucleus, non modifica
+     mai quelli esistenti.
+   ════════════════════════════════════════════════════════════ */
+
+function TokenChip({ token, onClick, isRemoved }) {
+  const fitzColor = token.fitz || 'giallo';
+  return (
+    <button
+      className={`token-chip fitz-${fitzColor} ${isRemoved ? 'removed' : ''}`}
+      onClick={onClick}
+      title={`«${token.word}» — ${fitzColor}${token.source ? ' (' + token.source + ')' : ''} • clicca per modificare`}
+      type="button"
+    >
+      <div className={`token-chip-emoji ${!token.emoji ? 'no-emoji' : ''}`}>
+        {token.emoji ? <EmojiImage emoji={token.emoji} size={22} /> : '—'}
+      </div>
+      <div className="token-chip-word">{token.word}</div>
+    </button>
+  );
+}
+
+function TokenEditor({ token, onUpdate, onClose, onRemove }) {
+  const FITZ_LIST = FITZGERALD;
+  return (
+    <div className="token-editor" role="region" aria-label="Modifica token">
+      <div className="token-editor-row">
+        <div className="token-editor-label">Parola</div>
+        <input
+          type="text"
+          className="text-input"
+          value={token.word}
+          onChange={e => onUpdate({...token, word: e.target.value})}
+        />
+      </div>
+      <div className="token-editor-row">
+        <div className="token-editor-label">Colore</div>
+        <div className="color-selector">
+          {FITZ_LIST.map(f => (
+            <div
+              key={f.key}
+              className={`color-chip ${token.fitz === f.key ? 'selected' : ''}`}
+              style={{background: f.label}}
+              onClick={() => onUpdate({...token, fitz: f.key})}
+              title={f.name}
+              role="radio"
+              aria-checked={token.fitz === f.key}
+              tabIndex={0}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="token-editor-row">
+        <div className="token-editor-label">Emoji</div>
+        <input
+          type="text"
+          className="text-input"
+          value={token.emoji || ''}
+          placeholder="(nessuna, sarà reso come testo)"
+          onChange={e => onUpdate({...token, emoji: e.target.value || null})}
+          style={{maxWidth: 200}}
+        />
+        {(token.alternative || []).length > 0 && (
+          <>
+            <span style={{fontSize: 11, color: '#777'}}>oppure:</span>
+            {token.alternative.map((alt, i) => (
+              <button
+                key={i}
+                className="btn btn-secondary btn-small"
+                onClick={() => onUpdate({...token, emoji: alt})}
+                style={{padding: '4px 8px'}}
+              ><EmojiImage emoji={alt} size={18} /></button>
+            ))}
+          </>
+        )}
+      </div>
+      <div className="token-editor-row" style={{justifyContent: 'space-between'}}>
+        <button className="btn btn-danger btn-small" onClick={onRemove}>🗑 Rimuovi token</button>
+        <button className="btn btn-secondary btn-small" onClick={onClose}>Fine</button>
+      </div>
+    </div>
+  );
+}
+
+function ImportSentenceCard({ sentence, index, onUpdate, onCommit, isCommitted }) {
+  const [editingTokenIdx, setEditingTokenIdx] = useState(null);
+
+  const handleTokenize = () => {
+    const tokens = tokenize(sentence.simplified || sentence.original)
+      .map(w => {
+        const cls = classifyToken(w);
+        return {
+          id: uid(),
+          word: w,
+          fitz: cls.fitz,
+          emoji: cls.emoji,
+          shortcode: cls.shortcode || null,
+          alternative: cls.alternative || [],
+          source: cls.source,
+          removed: false
+        };
+      });
+    onUpdate({...sentence, tokens});
+    setEditingTokenIdx(null);
+  };
+
+  const updateToken = (idx, updated) => {
+    const newTokens = sentence.tokens.map((t, i) => i === idx ? updated : t);
+    onUpdate({...sentence, tokens: newTokens});
+  };
+
+  const removeToken = (idx) => {
+    const newTokens = sentence.tokens.map((t, i) => i === idx ? {...t, removed: !t.removed} : t);
+    onUpdate({...sentence, tokens: newTokens});
+    setEditingTokenIdx(null);
+  };
+
+  return (
+    <div className={`sentence-card ${isCommitted ? 'committed' : ''}`}>
+      <div className="sentence-header">
+        <span className="sentence-num">{index + 1}</span>
+        <span className="sentence-original">"{sentence.original}"</span>
+        {isCommitted && <span style={{fontSize: 11, color: '#2E7D32', fontWeight: 700}}>✓ Aggiunto al progetto</span>}
+      </div>
+      <textarea
+        className="sentence-simplified"
+        value={sentence.simplified}
+        onChange={e => onUpdate({...sentence, simplified: e.target.value, tokens: null})}
+        placeholder="Versione semplificata (modificabile). Se vuota userà l'originale."
+        rows={2}
+        disabled={isCommitted}
+      />
+      <div className="sentence-actions">
+        {!sentence.tokens ? (
+          <button className="btn btn-primary btn-small" onClick={handleTokenize} disabled={isCommitted}>
+            🔍 Tokenizza
+          </button>
+        ) : (
+          <>
+            <button className="btn btn-secondary btn-small" onClick={handleTokenize} disabled={isCommitted}>
+              🔄 Re-tokenizza
+            </button>
+            <button
+              className="btn btn-success btn-small"
+              onClick={() => onCommit(sentence)}
+              disabled={isCommitted || sentence.tokens.filter(t => !t.removed).length === 0}
+            >
+              ➕ Aggiungi al progetto
+            </button>
+            <span style={{fontSize: 11, color: '#777', marginLeft: 'auto'}}>
+              {sentence.tokens.filter(t => !t.removed).length} token attivi
+            </span>
+          </>
+        )}
+      </div>
+      {sentence.tokens && (
+        <div className="token-strip">
+          {sentence.tokens.map((token, i) => (
+            <TokenChip
+              key={token.id}
+              token={token}
+              isRemoved={token.removed}
+              onClick={() => !isCommitted && setEditingTokenIdx(i === editingTokenIdx ? null : i)}
+            />
+          ))}
+        </div>
+      )}
+      {editingTokenIdx !== null && sentence.tokens && sentence.tokens[editingTokenIdx] && (
+        <TokenEditor
+          token={sentence.tokens[editingTokenIdx]}
+          onUpdate={(updated) => updateToken(editingTokenIdx, updated)}
+          onClose={() => setEditingTokenIdx(null)}
+          onRemove={() => removeToken(editingTokenIdx)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ImportModal({ open, onClose, onAddNucleus, projectNucleiCount }) {
+  const [rawText, setRawText] = useState('');
+  const [sentences, setSentences] = useState([]);  // array di {id, original, simplified, tokens?, committed?}
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const handleSplit = () => {
+    if (!rawText.trim()) return;
+    const parts = splitIntoSentences(rawText);
+    const newSentences = parts.map(p => ({
+      id: uid(),
+      original: p,
+      simplified: p,
+      tokens: null,
+      committed: false
+    }));
+    setSentences(newSentences);
+  };
+
+  const updateSentence = (id, updated) => {
+    setSentences(prev => prev.map(s => s.id === id ? updated : s));
+  };
+
+  const handleCommitSentence = (sentence) => {
+    const activeTokens = (sentence.tokens || []).filter(t => !t.removed);
+    if (activeTokens.length === 0) return;
+    const titleNumber = projectNucleiCount + sentences.filter(s => s.committed).length + 1;
+    const nucleus = {
+      id: uid(),
+      title: `FRASE ${titleNumber}`,
+      body: sentence.simplified || sentence.original,
+      tiles: activeTokens.map(t => {
+        const hasEmoji = !!t.emoji;
+        return {
+          id: uid(),
+          color: t.fitz || 'giallo',
+          emoji: hasEmoji ? t.emoji : t.word,
+          word: t.word,
+          isText: !hasEmoji
+        };
+      })
+    };
+    onAddNucleus(nucleus);
+    updateSentence(sentence.id, { ...sentence, committed: true });
+  };
+
+  const handleReset = () => {
+    setRawText('');
+    setSentences([]);
+  };
+
+  const committedCount = sentences.filter(s => s.committed).length;
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="import-title" onClick={onClose}>
+      <div className="modal-content modal-large" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title" id="import-title">
+            📝 Importa testo → CAA <span style={{fontWeight: 400, color:'#888', fontSize: 12, marginLeft: 8}}>(area preliminare, separata dall'editor)</span>
+          </div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+
+        <div style={{flex: 1, overflowY: 'auto'}}>
+          {/* Step 1: paste */}
+          <div className="import-section">
+            <div className="import-section-title">
+              <span className="step-num">1</span>
+              Incolla il testo originale
+            </div>
+            <textarea
+              className="import-textarea"
+              value={rawText}
+              onChange={e => setRawText(e.target.value)}
+              placeholder={'Incolla qui una o più frasi. Esempio:\n"Mario va a scuola in autobus. La maestra spiega la lezione. I bambini ascoltano con attenzione."'}
+            />
+            <div style={{display: 'flex', gap: 8, marginTop: 8, alignItems: 'center'}}>
+              <button
+                className="btn btn-primary"
+                onClick={handleSplit}
+                disabled={!rawText.trim()}
+              >✂️ Scomponi in frasi</button>
+              {sentences.length > 0 && (
+                <button className="btn btn-secondary btn-small" onClick={handleReset}>↺ Ricomincia</button>
+              )}
+              <span style={{fontSize: 12, color: '#777', marginLeft: 'auto'}}>
+                Lo split avviene sui terminatori <code>. ! ? ;</code>
+              </span>
+            </div>
+          </div>
+
+          {/* Step 2: sentences */}
+          {sentences.length > 0 && (
+            <div className="import-section">
+              <div className="import-section-title">
+                <span className="step-num">2</span>
+                Semplifica e tokenizza ({sentences.length} frasi rilevate{committedCount > 0 ? `, ${committedCount} aggiunte` : ''})
+              </div>
+              <div className="help-tip" style={{marginBottom: 12}}>
+                Per ogni frase: modifica la versione semplificata se serve, premi <strong>Tokenizza</strong>, poi clicca i singoli token per cambiare colore Fitzgerald o emoji. Infine <strong>Aggiungi al progetto</strong> crea un nuovo nucleo nel tuo progetto (i nuclei già presenti non vengono toccati).
+              </div>
+              {sentences.map((s, i) => (
+                <ImportSentenceCard
+                  key={s.id}
+                  sentence={s}
+                  index={i}
+                  isCommitted={s.committed}
+                  onUpdate={(updated) => updateSentence(s.id, updated)}
+                  onCommit={handleCommitSentence}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <div style={{flex: 1, fontSize: 12, color: '#777'}}>
+            {committedCount > 0 && <>✓ {committedCount} nucleo/i aggiunto/i al progetto.</>}
+          </div>
+          <button className="btn btn-primary" onClick={onClose}>Chiudi</button>
         </div>
       </div>
     </div>
@@ -2263,6 +2829,7 @@ function App() {
   const [recentEmojis, setRecentEmojis] = useState([]);
   const [tileLibrary, setTileLibrary] = useState([]);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null); // {title,message,onConfirm,danger}
 
   const fileInputRef = useRef(null);
@@ -2452,6 +3019,16 @@ function App() {
       }]
     });
   };
+
+  // Aggiunge un nucleo già strutturato (usato da ImportModal). Non tocca i nuclei esistenti.
+  const appendNucleus = useCallback((newNucleus) => {
+    if (!currentProject) return;
+    updateProject({
+      ...currentProject,
+      nuclei: [...currentProject.nuclei, newNucleus]
+    });
+    setToast(`✓ Nucleo "${newNucleus.title}" aggiunto al progetto`);
+  }, [currentProject]);
 
   const deleteNucleus = (id) => {
     if (!currentProject) return;
@@ -2739,6 +3316,25 @@ function App() {
         {/* ── EDITOR ── */}
         {view === 'editor' && currentProject && (
           <>
+            {/* ── PRELIMINARE: Import testo → CAA (finestra separata) ── */}
+            <div className="panel editor-only" style={{borderLeft: '4px solid #1565C0', background: 'linear-gradient(to right, #E3F2FD 0%, white 40%)'}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap'}}>
+                <div style={{flex: '1 1 280px', minWidth: 0}}>
+                  <div style={{fontWeight: 700, fontSize: 14, color: '#1565C0', marginBottom: 4}}>
+                    📝 Preliminare: importa un testo da trasformare in CAA
+                  </div>
+                  <div style={{fontSize: 12, color: '#555', lineHeight: 1.5}}>
+                    Apri una finestra separata per incollare frasi o paragrafi, scomporli automaticamente, semplificare e tokenizzare secondo Fitzgerald. I nuclei che generi vengono aggiunti qui sotto al tuo progetto; i nuclei già presenti restano intatti.
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setImportOpen(true)}
+                  aria-label="Apri finestra di import preliminare"
+                >📝 Apri import testo</button>
+              </div>
+            </div>
+
             <div className="panel editor-only">
               <input
                 type="text"
@@ -2822,6 +3418,13 @@ function App() {
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
         onSelect={createProjectFromTemplate}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onAddNucleus={appendNucleus}
+        projectNucleiCount={currentProject?.nuclei.length || 0}
       />
 
       <ConfirmDialog
