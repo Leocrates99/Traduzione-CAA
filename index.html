@@ -176,7 +176,7 @@
   .tile-edit:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
   .tile-edit.selected { box-shadow: 0 0 0 3px #1565C0; }
   .tile-emoji-area { padding: 14px 8px 10px; text-align: center; font-size: 42px; min-height: 74px; display: flex; align-items: center; justify-content: center; background: white; }
-  .tile-emoji-area.text-mode { font-size: 18px; font-weight: 900; line-height: 1.25; padding: 10px 6px; }
+  .tile-emoji-area.text-mode { font-size: 36px; font-weight: 900; line-height: 1.05; padding: 6px 4px; }
   .tile-label { padding: 8px 5px; text-align: center; font-weight: 800; font-size: 9.5px; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.35; min-height: 34px; display: flex; align-items: center; justify-content: center; word-break: break-word; }
   .tile-delete-btn {
     position: absolute; top: -6px; right: -6px; width: 26px; height: 26px;
@@ -310,7 +310,7 @@
   }
   .library-mini-tile:hover, .library-mini-tile:focus-visible { transform: translateY(-2px); outline: none; box-shadow: 0 3px 8px rgba(0,0,0,0.18); }
   .library-mini-emoji { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; }
-  .library-mini-emoji.text-mode { font-size: 11px; font-weight: 800; padding: 2px; text-align: center; }
+  .library-mini-emoji.text-mode { font-size: 18px; font-weight: 800; padding: 2px; text-align: center; line-height: 1.05; }
   .library-mini-label { color: white; font-size: 7px; font-weight: 800; text-transform: uppercase; padding: 3px; text-align: center; line-height: 1.1; word-break: break-word; max-height: 22px; overflow: hidden; }
   .library-empty { padding: 14px; color: #999; font-size: 12px; font-style: italic; text-align: center; }
 
@@ -326,7 +326,7 @@
   .preview-tiles-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: flex-end; }
   .preview-tile { width: 110px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); flex-shrink: 0; }
   .preview-tile-emoji { padding: 14px 8px 10px; text-align: center; font-size: 42px; min-height: 74px; display: flex; align-items: center; justify-content: center; }
-  .preview-tile.text-mode .preview-tile-emoji { font-size: 18px; font-weight: 900; line-height: 1.25; padding: 10px 6px; }
+  .preview-tile.text-mode .preview-tile-emoji { font-size: 36px; font-weight: 900; line-height: 1.05; padding: 6px 4px; }
   .preview-tile-label { padding: 8px 5px; text-align: center; font-weight: 800; font-size: 9.5px; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.35; min-height: 34px; display: flex; align-items: center; justify-content: center; word-break: break-word; }
 
   /* OPENMOJI IMAGE */
@@ -432,7 +432,7 @@
     .add-tile-btn { height: 96px; }
     .tile-emoji-area, .preview-tile-emoji { font-size: 34px; min-height: 64px; padding: 10px 6px 8px; }
     .tile-label, .preview-tile-label { font-size: 8.5px; padding: 6px 4px; min-height: 30px; }
-    .tile-emoji-area.text-mode, .preview-tile.text-mode .preview-tile-emoji { font-size: 14px; }
+    .tile-emoji-area.text-mode, .preview-tile.text-mode .preview-tile-emoji { font-size: 24px; }
     .preview-container { padding: 18px 10px; }
     .nucleus-block { padding: 12px 10px; }
     .header-actions { gap: 4px; }
@@ -591,6 +591,30 @@ function debounce(fn, ms) {
 function hexToRgb(hex) {
   const m = hex.replace('#','').match(/.{2}/g);
   return m ? m.map(h => parseInt(h, 16)) : [0,0,0];
+}
+
+// Calcola font-size del testo in modalità "testo" così da occupare visivamente
+// uno spazio equiparabile a quello di un'emoji. Scala in base a:
+//  - numero di righe (1, 2, 3, 4+)
+//  - lunghezza massima di riga
+//  - viewport (più piccolo su mobile per non sforare la tessera 92px)
+// `baseSize` è la dimensione target su desktop se il testo è breve (≤ 8 char).
+// `opts.ignoreViewport=true` per i contesti di rendering "logico" (PDF/PPTX
+// dove il viewport del browser non c'entra con la dimensione della pagina).
+function textModeSize(text, baseSize, opts = {}) {
+  const lines = (text || '').split('\n');
+  const numLines = Math.max(1, lines.length);
+  const maxLen = Math.max(1, ...lines.map(l => l.length));
+  let s = baseSize;
+  if (numLines === 2) s *= 0.70;
+  else if (numLines === 3) s *= 0.52;
+  else if (numLines >= 4) s *= 0.40;
+  if (maxLen > 8) s *= 8 / maxLen;
+  // Adatta al viewport mobile (tessera ~92px vs 110px desktop)
+  if (!opts.ignoreViewport && typeof window !== 'undefined' && window.innerWidth <= 600) {
+    s *= 0.66;
+  }
+  return Math.max(baseSize * 0.28, Math.min(s, baseSize));
 }
 
 const STORAGE_KEY = 'caa_editor_data_v1';
@@ -988,7 +1012,11 @@ function TileEdit({ tile, isSelected, onClick, onDelete, onMove, tabIndex=0 }) {
         onMouseDown={stopDrag}
       >⠿</span>
       <button className="tile-delete-btn" onClick={handleDelete} onMouseDown={stopDrag} aria-label="Elimina tessera" tabIndex={-1}>×</button>
-      <div className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`} aria-hidden="true">
+      <div
+        className={`tile-emoji-area ${tile.isText ? 'text-mode' : ''}`}
+        aria-hidden="true"
+        style={tile.isText ? { fontSize: textModeSize(tile.emoji, 36) + 'px', lineHeight: 1.05 } : undefined}
+      >
         {tile.isText
           ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
           : <EmojiImage emoji={tile.emoji} size={56} />}
@@ -1001,7 +1029,10 @@ function TileEdit({ tile, isSelected, onClick, onDelete, onMove, tabIndex=0 }) {
 function PreviewTile({ tile }) {
   return (
     <div className={`preview-tile fitz-${tile.color} ${tile.isText ? 'text-mode' : ''}`}>
-      <div className="preview-tile-emoji">
+      <div
+        className="preview-tile-emoji"
+        style={tile.isText ? { fontSize: textModeSize(tile.emoji, 36) + 'px', lineHeight: 1.05 } : undefined}
+      >
         {tile.isText
           ? tile.emoji.split('\n').map((line, i) => <div key={i}>{line}</div>)
           : <EmojiImage emoji={tile.emoji} size={56} />}
@@ -1605,7 +1636,10 @@ function TileLibrary({ library, onPick, onClear }) {
             title={`${tile.word} — clicca per inserire in un nucleo`}
             aria-label={`Riusa tessera ${tile.word}`}
           >
-            <div className={`library-mini-emoji ${tile.isText ? 'text-mode' : ''}`}>
+            <div
+              className={`library-mini-emoji ${tile.isText ? 'text-mode' : ''}`}
+              style={tile.isText ? { fontSize: textModeSize(tile.emoji, 18) + 'px', lineHeight: 1.05 } : undefined}
+            >
               {tile.isText
                 ? tile.emoji.split('\n').slice(0,2).map((l,j) => <div key={j}>{l}</div>)
                 : <EmojiImage emoji={tile.emoji} size={32} />}
@@ -1770,11 +1804,15 @@ async function drawTileVector(pdf, tile, x, y, w, h, emojiCache) {
   if (tile.isText) {
     pdf.setTextColor(lbl[0], lbl[1], lbl[2]);
     pdf.setFont('helvetica', tile.color === 'arancio' ? 'bolditalic' : 'bold');
-    pdf.setFontSize(10);
+    // Dimensione adattiva: base in pt PDF ≈ visualmente equivalente a un'emoji
+    // in una tessera 30mm × 36mm. Base 18pt per testo breve.
+    const fontPt = textModeSize(tile.emoji, 18, { ignoreViewport: true });
+    pdf.setFontSize(fontPt);
     const lines = tile.emoji.split('\n');
-    const lineH = 3.6;
+    // line-height ≈ fontSize * 0.35 (pt → mm: 1 pt = 0.353 mm)
+    const lineH = fontPt * 0.40;
     const totalH = lines.length * lineH;
-    const startY = y + emojiH/2 - totalH/2 + lineH/2 + 0.3;
+    const startY = y + emojiH/2 - totalH/2 + lineH * 0.7;
     lines.forEach((line, i) => {
       pdf.text(line, x + w/2, startY + i * lineH, { align: 'center' });
     });
@@ -2038,14 +2076,18 @@ function drawTilePPTX(slide, tile, x, y, w, h) {
   // Emoji o testo nell'area emoji
   if (tile.isText) {
     const lines = tile.emoji.split('\n');
+    // Base 32pt per testo breve, scalato in base a contenuto.
+    // Visualmente equivalente a un'emoji 65-85% della tessera.
+    const fontPt = textModeSize(tile.emoji, 32, { ignoreViewport: true });
     slide.addText(lines.join('\n'), {
       x: x + 0.05, y, w: w - 0.1, h: emojiH,
-      fontSize: Math.max(10, Math.min(20, 18 - lines.length * 2)),
+      fontSize: Math.round(fontPt),
       bold: true,
       color: lblHex,
       align: 'center', valign: 'middle',
       italic: tile.color === 'arancio',
-      fontFace: 'Helvetica'
+      fontFace: 'Helvetica',
+      autoFit: true
     });
   } else {
     const cache = getOpenmojiCache();
