@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -872,7 +873,11 @@ const STORAGE_KEY = 'caa_editor_data_v1';
 const STORAGE_RECENT_KEY = 'caa_recent_emojis_v1';
 const STORAGE_LIBRARY_KEY = 'caa_tile_library_v1';
 const STORAGE_OPENMOJI_KEY = 'caa_openmoji_cache_v1';
+const STORAGE_BACKUPS_KEY = 'caa_backups_v1';     // rolling 10 snapshot
+const STORAGE_PANIC_KEY = 'caa_panic_save_v1';    // ultimo stato certo, mai scartato
 const SCHEMA_VERSION = 1;
+const BACKUPS_MAX = 10;
+const BACKUP_KEY_INCLUSIA = 'INCLUSIA_BACKUP_V1:'; // prefisso per metadata embedded
 
 /* ════════════════════════════════════════════════════════════
    OPENMOJI INTEGRATION
@@ -961,24 +966,399 @@ function preloadOpenmoji(emojis, maxParallel = 4) {
   });
 }
 
+// Normalizza una struttura progetto/nucleo per back-compat completa.
+// Aggiunge campi mancanti senza distruggere quelli presenti.
+function normalizeProject(p) {
+  if (!p || typeof p !== 'object') return null;
+  return {
+    id: p.id || uid(),
+    title: p.title || 'Senza titolo',
+    createdAt: p.createdAt || new Date().toISOString(),
+    updatedAt: p.updatedAt || new Date().toISOString(),
+    ...p,
+    nuclei: Array.isArray(p.nuclei) ? p.nuclei.map(n => ({
+      id: n.id || uid(),
+      title: n.title || '',
+      body: typeof n.body === 'string' ? n.body : '',
+      ...n,
+      tiles: Array.isArray(n.tiles) ? n.tiles.map(t => ({
+        id: t.id || uid(),
+        color: t.color || 'giallo',
+        emoji: t.emoji || '',
+        word: t.word || '',
+        isText: !!t.isText,
+        ...t
+      })) : []
+    })) : []
+  };
+}
+
+// CAMBIAMENTO CRITICO: NON SCARTA MAI i dati per schema mismatch.
+// Cerca di leggere TUTTE le fonti possibili (current → backups → panic)
+// e normalizza il risultato. Restituisce {projects, currentId, source}.
 function loadFromStorage() {
+  // Sorgente 1: chiave corrente
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.schemaVersion !== SCHEMA_VERSION) return null;
-    return parsed;
-  } catch (e) { console.error('Errore lettura localStorage:', e); return null; }
-}
-function saveToStorage(data) {
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+        return {
+          projects: parsed.projects.map(normalizeProject).filter(Boolean),
+          currentId: parsed.currentId,
+          source: 'current'
+        };
+      }
+    }
+  } catch (e) { console.warn('Errore lettura storage corrente:', e); }
+
+  // Sorgente 2: ultimo backup
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      ...data,
-      schemaVersion: SCHEMA_VERSION,
-      lastSaved: new Date().toISOString()
-    }));
-    return true;
-  } catch (e) { console.error('Errore scrittura localStorage:', e); return false; }
+    const backupsRaw = localStorage.getItem(STORAGE_BACKUPS_KEY);
+    if (backupsRaw) {
+      const backups = JSON.parse(backupsRaw);
+      if (Array.isArray(backups) && backups.length > 0) {
+        const latest = backups[0];
+        if (latest && latest.data && Array.isArray(latest.data.projects)) {
+          console.warn('Storage corrente vuoto/corrotto, ripristinato da backup del ' + new Date(latest.ts).toISOString());
+          return {
+            projects: latest.data.projects.map(normalizeProject).filter(Boolean),
+            currentId: latest.data.currentId,
+            source: 'backup'
+          };
+        }
+      }
+    }
+  } catch (e) { console.warn('Errore lettura backup:', e); }
+
+  // Sorgente 3: panic save (estremo)
+  try {
+    const panicRaw = localStorage.getItem(STORAGE_PANIC_KEY);
+    if (panicRaw) {
+      const parsed = JSON.parse(panicRaw);
+      if (parsed && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+        console.warn('Recupero da panic save.');
+        return {
+          projects: parsed.projects.map(normalizeProject).filter(Boolean),
+          currentId: parsed.currentId,
+          source: 'panic'
+        };
+      }
+    }
+  } catch (e) { console.warn('Errore lettura panic save:', e); }
+
+  return null;
+}
+
+// Salvataggio robusto. Restituisce {ok, reason?}.
+// In caso di quota piena tenta di liberare la cache OpenMoji
+// per privilegiare i dati dei progetti.
+function saveToStorage(data) {
+  const payload = JSON.stringify({
+    ...data,
+    schemaVersion: SCHEMA_VERSION,
+    lastSaved: new Date().toISOString()
+  });
+  try {
+    localStorage.setItem(STORAGE_KEY, payload);
+    // Aggiorna anche panic save (last-known-good) ogni volta che il save riesce
+    try { localStorage.setItem(STORAGE_PANIC_KEY, payload); } catch {}
+    return { ok: true };
+  } catch (e) {
+    // Quota piena? Prova a liberare la cache OpenMoji
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+      console.warn('Quota piena, svuoto cache OpenMoji per fare spazio ai progetti...');
+      try {
+        localStorage.removeItem(STORAGE_OPENMOJI_KEY);
+        _openmojiCache = {};
+      } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, payload);
+        try { localStorage.setItem(STORAGE_PANIC_KEY, payload); } catch {}
+        return { ok: true, recovered: true };
+      } catch (e2) {
+        console.error('Salvataggio fallito anche dopo liberazione cache:', e2);
+        return { ok: false, reason: 'quota' };
+      }
+    }
+    console.error('Errore scrittura localStorage:', e);
+    return { ok: false, reason: 'error', error: e };
+  }
+}
+
+// Sistema di backup automatico: snapshot rotativi con timestamp.
+function pushBackup(data) {
+  if (!data || !Array.isArray(data.projects) || data.projects.length === 0) return false;
+  try {
+    let backups = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_BACKUPS_KEY);
+      if (raw) backups = JSON.parse(raw) || [];
+    } catch {}
+    // Skip se è identico all'ultimo
+    const fingerprint = JSON.stringify(data.projects);
+    if (backups[0] && JSON.stringify(backups[0].data.projects) === fingerprint) {
+      return false;
+    }
+    backups.unshift({
+      ts: Date.now(),
+      data: { projects: data.projects, currentId: data.currentId },
+      stats: {
+        projects: data.projects.length,
+        nuclei: data.projects.reduce((s,p) => s + (p.nuclei?.length || 0), 0),
+        tiles: data.projects.reduce((s,p) => s + (p.nuclei?.reduce((a,n) => a + (n.tiles?.length || 0), 0) || 0), 0)
+      }
+    });
+    while (backups.length > BACKUPS_MAX) backups.pop();
+    try {
+      localStorage.setItem(STORAGE_BACKUPS_KEY, JSON.stringify(backups));
+      return true;
+    } catch (e) {
+      // Se i backup pesano troppo, rimuovi gli ultimi
+      while (backups.length > 3) {
+        backups.pop();
+        try {
+          localStorage.setItem(STORAGE_BACKUPS_KEY, JSON.stringify(backups));
+          return true;
+        } catch {}
+      }
+      console.warn('Backup impossibile:', e);
+      return false;
+    }
+  } catch (e) { console.warn('pushBackup error:', e); return false; }
+}
+
+function listBackups() {
+  try {
+    const raw = localStorage.getItem(STORAGE_BACKUPS_KEY);
+    return raw ? (JSON.parse(raw) || []) : [];
+  } catch { return []; }
+}
+
+function clearBackups() {
+  try { localStorage.removeItem(STORAGE_BACKUPS_KEY); return true; } catch { return false; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   EMBED / EXTRACT BACKUP NEI FILE DI EXPORT
+   ─ Permette di ricostruire l'editing scaricando il file di output
+   ─ PDF: campo Subject del Info dictionary
+   ─ PPTX: dc:subject in docProps/core.xml
+   ─ PNG: chunk tEXt con keyword 'inclusia-data'
+   ════════════════════════════════════════════════════════════ */
+
+// UTF-8 safe base64 encode/decode
+function b64encodeUtf8(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64decodeUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+// Serializza un singolo progetto in payload compatto per embed
+function serializeProjectForEmbed(project) {
+  return BACKUP_KEY_INCLUSIA + b64encodeUtf8(JSON.stringify({
+    schemaVersion: SCHEMA_VERSION,
+    projects: [project],
+    exportedAt: new Date().toISOString()
+  }));
+}
+
+// Estrae payload se inizia col nostro prefisso
+function tryParseEmbedded(text) {
+  if (!text || typeof text !== 'string') return null;
+  if (!text.startsWith(BACKUP_KEY_INCLUSIA)) return null;
+  try {
+    const json = b64decodeUtf8(text.slice(BACKUP_KEY_INCLUSIA.length));
+    const data = JSON.parse(json);
+    if (data && Array.isArray(data.projects) && data.projects.length > 0) {
+      return data.projects.map(normalizeProject).filter(Boolean);
+    }
+  } catch (e) { console.warn('Embedded backup parse error:', e); }
+  return null;
+}
+
+// CRC32 (polinomio PNG / ITU-T V.42)
+const _CRC32_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(data) {
+  let c = 0xffffffff;
+  for (let i = 0; i < data.length; i++) c = _CRC32_TABLE[(c ^ data[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+
+// Inserisce un chunk tEXt prima dell'IEND di un PNG
+function insertPNGtEXt(pngArrayBuffer, key, value) {
+  const bytes = new Uint8Array(pngArrayBuffer);
+  for (let i = 0; i < 8; i++) {
+    if (bytes[i] !== PNG_SIGNATURE[i]) throw new Error('Non è un PNG valido');
+  }
+  // Trova posizione del chunk IEND
+  let pos = 8, iendStart = -1;
+  while (pos < bytes.length) {
+    const length = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+    const type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+    if (type === 'IEND') { iendStart = pos; break; }
+    pos += 12 + length;
+  }
+  if (iendStart === -1) throw new Error('IEND non trovato');
+
+  // Costruisci chunk data: keyword \0 text
+  const enc = new TextEncoder();
+  const keyBytes = enc.encode(key);
+  const valBytes = enc.encode(value);
+  const chunkData = new Uint8Array(keyBytes.length + 1 + valBytes.length);
+  chunkData.set(keyBytes, 0);
+  chunkData[keyBytes.length] = 0;
+  chunkData.set(valBytes, keyBytes.length + 1);
+
+  // type + data per il CRC
+  const typeAndData = new Uint8Array(4 + chunkData.length);
+  typeAndData[0] = 0x74; typeAndData[1] = 0x45; typeAndData[2] = 0x58; typeAndData[3] = 0x74; // 'tEXt'
+  typeAndData.set(chunkData, 4);
+  const crc = crc32(typeAndData);
+
+  // Costruisci chunk completo
+  const len = chunkData.length;
+  const chunk = new Uint8Array(4 + 4 + len + 4);
+  chunk[0] = (len >>> 24) & 0xff;
+  chunk[1] = (len >>> 16) & 0xff;
+  chunk[2] = (len >>> 8) & 0xff;
+  chunk[3] = len & 0xff;
+  chunk.set(typeAndData, 4);
+  chunk[chunk.length - 4] = (crc >>> 24) & 0xff;
+  chunk[chunk.length - 3] = (crc >>> 16) & 0xff;
+  chunk[chunk.length - 2] = (crc >>> 8) & 0xff;
+  chunk[chunk.length - 1] = crc & 0xff;
+
+  // Concatena: testa + chunk + IEND...
+  const out = new Uint8Array(bytes.length + chunk.length);
+  out.set(bytes.subarray(0, iendStart), 0);
+  out.set(chunk, iendStart);
+  out.set(bytes.subarray(iendStart), iendStart + chunk.length);
+  return out.buffer;
+}
+
+// Estrae il valore di un chunk tEXt con la keyword data
+function extractPNGtEXt(pngArrayBuffer, key) {
+  const bytes = new Uint8Array(pngArrayBuffer);
+  for (let i = 0; i < 8; i++) if (bytes[i] !== PNG_SIGNATURE[i]) return null;
+  const dec = new TextDecoder();
+  let pos = 8;
+  while (pos < bytes.length - 4) {
+    const length = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+    const type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+    if (type === 'tEXt') {
+      const data = bytes.subarray(pos + 8, pos + 8 + length);
+      const nullIdx = data.indexOf(0);
+      if (nullIdx > 0) {
+        const k = dec.decode(data.subarray(0, nullIdx));
+        if (k === key) return dec.decode(data.subarray(nullIdx + 1));
+      }
+    }
+    if (type === 'IEND') break;
+    pos += 12 + length;
+  }
+  return null;
+}
+
+// Estrae /Subject (...) dall'Info dictionary di un PDF (gestisce parentesi escaped)
+function extractPDFSubject(arrayBuffer) {
+  // Decodifica come latin-1 per non corrompere byte
+  const bytes = new Uint8Array(arrayBuffer);
+  let text = '';
+  // Scansione del PDF: cerchiamo solo nei primi e ultimi 200KB per velocità
+  const maxScan = 200 * 1024;
+  const head = bytes.subarray(0, Math.min(bytes.length, maxScan));
+  const tail = bytes.length > maxScan ? bytes.subarray(bytes.length - maxScan) : new Uint8Array(0);
+  const dec = new TextDecoder('latin1');
+  text = dec.decode(head) + (tail.length ? '\n' + dec.decode(tail) : '');
+  // Match /Subject (...)
+  const re = /\/Subject\s*\(((?:[^()\\]|\\.|\\\d+)*)\)/;
+  const m = text.match(re);
+  if (!m) return null;
+  // Unescape minimo (parentesi escapate, ottali)
+  return m[1]
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\(\d{1,3})/g, (_, d) => String.fromCharCode(parseInt(d, 8)));
+}
+
+// Estrae dc:subject da PPTX (.zip → docProps/core.xml)
+async function extractPPTXSubject(arrayBuffer) {
+  if (typeof JSZip === 'undefined') throw new Error('JSZip non caricato');
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const coreFile = zip.file('docProps/core.xml');
+  if (!coreFile) return null;
+  const xml = await coreFile.async('string');
+  const m = xml.match(/<dc:subject[^>]*>([\s\S]*?)<\/dc:subject>/);
+  if (!m) return null;
+  // Unescape XML
+  return m[1]
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+}
+
+// Auto-detect formato file e tenta il recupero. Restituisce array di progetti o null.
+async function recoverProjectsFromFile(file) {
+  const name = (file.name || '').toLowerCase();
+  const arrayBuffer = await file.arrayBuffer();
+
+  // JSON: già un backup nativo
+  if (name.endsWith('.json')) {
+    const text = new TextDecoder().decode(arrayBuffer);
+    try {
+      const data = JSON.parse(text);
+      if (data.projects && Array.isArray(data.projects)) {
+        return data.projects.map(normalizeProject).filter(Boolean);
+      }
+    } catch {}
+    return null;
+  }
+
+  // PNG: chunk tEXt
+  if (name.endsWith('.png') || (arrayBuffer.byteLength >= 8 && new Uint8Array(arrayBuffer, 0, 8).every((b, i) => b === PNG_SIGNATURE[i]))) {
+    const value = extractPNGtEXt(arrayBuffer, 'inclusia-data');
+    if (value) {
+      const projects = tryParseEmbedded(value);
+      if (projects) return projects;
+    }
+    return null;
+  }
+
+  // PDF
+  if (name.endsWith('.pdf') || arrayBuffer.byteLength >= 5 && new TextDecoder().decode(new Uint8Array(arrayBuffer, 0, 5)) === '%PDF-') {
+    const subject = extractPDFSubject(arrayBuffer);
+    if (subject) {
+      const projects = tryParseEmbedded(subject);
+      if (projects) return projects;
+    }
+    return null;
+  }
+
+  // PPTX (ZIP) — signature PK
+  if (name.endsWith('.pptx') || (arrayBuffer.byteLength >= 2 && new Uint8Array(arrayBuffer, 0, 2).every((b, i) => b === [0x50, 0x4B][i]))) {
+    try {
+      const subject = await extractPPTXSubject(arrayBuffer);
+      if (subject) {
+        const projects = tryParseEmbedded(subject);
+        if (projects) return projects;
+      }
+    } catch (e) { console.warn('PPTX read failed:', e); }
+    return null;
+  }
+
+  return null;
 }
 function loadRecentEmojis() {
   try { return JSON.parse(localStorage.getItem(STORAGE_RECENT_KEY) || '[]'); } catch { return []; }
@@ -1663,6 +2043,80 @@ function ImportModal({ open, onClose, onAddNucleus, projectNucleiCount }) {
             {committedCount > 0 && <>✓ {committedCount} nucleo/i aggiunto/i al progetto.</>}
           </div>
           <button className="btn btn-primary" onClick={onClose}>Chiudi</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   BACKUPS MODAL — mostra i 10 snapshot rotativi salvati e
+   permette il ripristino di uno qualsiasi.
+   ════════════════════════════════════════════════════════════ */
+function BackupsModal({ open, onClose, onRestore }) {
+  const [backups, setBackups] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    setBackups(listBackups());
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose, refreshKey]);
+  if (!open) return null;
+
+  const fmtRel = (ts) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'meno di 1 minuto fa';
+    if (m < 60) return `${m} minuti fa`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} ore fa`;
+    const d = Math.floor(h / 24);
+    return `${d} giorni fa`;
+  };
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">📋 Backup automatici ({backups.length})</div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="modal-body">
+          {backups.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon" aria-hidden="true">📭</div>
+              <div className="empty-state-text">Nessun backup automatico ancora disponibile. Vengono creati ogni volta che salvi.</div>
+            </div>
+          ) : (
+            <>
+              <div className="help-tip" style={{marginBottom: 12}}>
+                Gli snapshot più recenti sono in alto. Cliccare uno per ripristinarlo — i tuoi progetti correnti verranno sostituiti (con conferma).
+              </div>
+              <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+                {backups.map((b, i) => {
+                  const s = b.stats || {};
+                  return (
+                    <button
+                      key={b.ts}
+                      className="project-card"
+                      onClick={() => onRestore(b)}
+                      style={{textAlign: 'left', cursor: 'pointer', borderRadius: 10, padding: 12}}
+                    >
+                      <div className="project-card-title">
+                        {i === 0 ? '🟢 ' : ''}Snapshot del {new Date(b.ts).toLocaleString('it-IT')}
+                      </div>
+                      <div className="project-card-meta">
+                        <span>{s.projects ?? '?'} progetti · {s.nuclei ?? '?'} frasi · {s.tiles ?? '?'} tessere</span>
+                        <span>{fmtRel(b.ts)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -2413,6 +2867,17 @@ async function exportVectorPDF(project) {
   if (!project) return;
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+  // Embed del backup completo nel Subject field. Permette il recupero
+  // dell'editing aprendo il PDF dall'app stessa.
+  try {
+    pdf.setProperties({
+      title: project.title || 'Tavola CAA',
+      subject: serializeProjectForEmbed(project),
+      author: 'Inclusia — Editor CAA',
+      keywords: 'inclusia,caa,fitzgerald',
+      creator: 'Inclusia https://leocrates99.github.io/Traduzione-CAA/'
+    });
+  } catch (e) { console.warn('PDF setProperties non riuscito:', e); }
   const pageW = pdf.internal.pageSize.getWidth();   // 297
   const pageH = pdf.internal.pageSize.getHeight();  // 210
   const margin = 12;
@@ -2574,6 +3039,21 @@ async function exportPNGSized(project, previewElementId='preview-content') {
   });
 }
 
+// Versione che embedda il backup del progetto nel chunk tEXt del PNG.
+async function exportPNGWithBackup(project, previewElementId='preview-content') {
+  const { blob, scale, w, h } = await exportPNGSized(project, previewElementId);
+  const arrayBuffer = await blob.arrayBuffer();
+  try {
+    const embedded = serializeProjectForEmbed(project);
+    const newBuffer = insertPNGtEXt(arrayBuffer, 'inclusia-data', embedded);
+    const newBlob = new Blob([newBuffer], { type: 'image/png' });
+    return { blob: newBlob, scale, w, h, withBackup: true };
+  } catch (e) {
+    console.warn('Impossibile embedare backup nel PNG, fornisco PNG semplice:', e);
+    return { blob, scale, w, h, withBackup: false };
+  }
+}
+
 /* ════════════════════════════════════════════════════════════
    EXPORT POWERPOINT (PPTX)
    ─ 1 slide per nucleo (= 1 "frase")
@@ -2708,6 +3188,11 @@ async function exportPPTX(project) {
   pres.title = project.title || 'Tavola CAA';
   pres.author = 'Inclusia — Editor CAA';
   pres.company = 'Inclusia';
+  // Embed del backup nel campo Subject del PPTX (docProps/core.xml dc:subject)
+  // Permette il recupero del progetto aprendo il .pptx dall'app.
+  try {
+    pres.subject = serializeProjectForEmbed(project);
+  } catch (e) { console.warn('PPTX subject embed fallito:', e); }
 
   // 3. Slide master "trasparente" (noFill)
   // pptxgenjs non espone direttamente noFill, ma omettendo background si ottiene
@@ -2830,6 +3315,8 @@ function App() {
   const [tileLibrary, setTileLibrary] = useState([]);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [backupsOpen, setBackupsOpen] = useState(false);
+  const recoverInputRef = useRef(null);
   const [confirmState, setConfirmState] = useState(null); // {title,message,onConfirm,danger}
 
   const fileInputRef = useRef(null);
@@ -2845,13 +3332,13 @@ function App() {
     initialized.current = true;
     const data = loadFromStorage();
     if (data && data.projects && data.projects.length > 0) {
-      // Migrate: assicura body presente sui nuclei
-      const migrated = data.projects.map(p => ({
-        ...p,
-        nuclei: (p.nuclei || []).map(normalizeNucleus)
-      }));
-      setProjects(migrated);
-      setCurrentId(data.currentId || migrated[0].id);
+      setProjects(data.projects);
+      setCurrentId(data.currentId || data.projects[0].id);
+      if (data.source === 'backup') {
+        setTimeout(() => setToast('⚠️ Dati recuperati da backup automatico'), 800);
+      } else if (data.source === 'panic') {
+        setTimeout(() => setToast('⚠️ Dati recuperati da panic save'), 800);
+      }
     } else {
       const example = exampleProject();
       setProjects([example]);
@@ -2861,23 +3348,38 @@ function App() {
     setTileLibrary(loadTileLibrary());
   }, []);
 
-  // ─ Salvataggio automatico DEBOUNCED (Punti 4 + 18) ─
+  // ─ Salvataggio automatico DEBOUNCED + backup snapshot rotativo ─
   const debouncedSave = useMemo(() => debounce((payload) => {
-    saveToStorage(payload);
+    const res = saveToStorage(payload);
+    if (!res.ok) {
+      setToast('⚠️ Spazio esaurito nel browser: liberato un po\' di spazio. Esporta un backup JSON ora.');
+    }
+    // Aggiorna anche il backup rotativo (skip dedupe interno)
+    pushBackup(payload);
   }, 300), []);
   useEffect(() => {
     if (!initialized.current || projects.length === 0) return;
     debouncedSave({ projects, currentId });
   }, [projects, currentId, debouncedSave]);
 
-  // Flush save quando la pagina viene chiusa
+  // Flush immediato su eventi di rischio: chiusura, cambio tab, blocco schermo.
   useEffect(() => {
-    const handler = () => {
+    const flush = () => {
       debouncedSave.flush();
-      if (projects.length) saveToStorage({ projects, currentId });
+      if (projects.length) {
+        saveToStorage({ projects, currentId });
+        pushBackup({ projects, currentId });
+      }
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    const visHandler = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', visHandler);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', visHandler);
+    };
   }, [projects, currentId, debouncedSave]);
 
   const currentProject = projects.find(p => p.id === currentId);
@@ -3142,6 +3644,61 @@ function App() {
     reader.readAsText(file);
   };
 
+  // Recupero universale: rileva il formato e tenta di estrarre il backup embedded.
+  // Funziona con .pdf, .pptx, .png (con tEXt chunk inclusia-data) o .json.
+  const handleRecoverFromFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setToast(`🔄 Lettura ${file.name}...`);
+    try {
+      const recovered = await recoverProjectsFromFile(file);
+      if (!recovered || recovered.length === 0) {
+        setToast('❌ Nessun backup ricostruibile in questo file');
+        return;
+      }
+      // Rigenera ID per evitare collisioni col progetto corrente
+      const fresh = recovered.map(p => ({
+        ...p,
+        id: uid(),
+        nuclei: (p.nuclei || []).map(n => ({
+          ...n,
+          id: uid(),
+          tiles: (n.tiles || []).map(t => ({...t, id: uid()}))
+        }))
+      }));
+      applyMutation(prev => [...fresh, ...prev]);
+      if (fresh[0]) setCurrentId(fresh[0].id);
+      setToast(`✅ Recuperati ${fresh.length} progetto/i da ${file.name}`);
+    } catch (err) {
+      console.error(err);
+      setToast('❌ Errore lettura file: ' + (err.message || 'sconosciuto'));
+    }
+  };
+
+  // Ripristino da snapshot di backup automatico
+  const handleRestoreBackup = (backup) => {
+    setConfirmState({
+      title: 'Ripristinare questo backup?',
+      message: <>I tuoi progetti attuali verranno <strong>sostituiti</strong> dallo snapshot del {new Date(backup.ts).toLocaleString('it-IT')}. Puoi annullare con <kbd>Ctrl+Z</kbd>.</>,
+      confirmLabel: 'Ripristina',
+      danger: true,
+      onConfirm: () => {
+        const restored = (backup.data.projects || []).map(normalizeProject).filter(Boolean);
+        if (restored.length === 0) {
+          setToast('❌ Backup vuoto');
+          setConfirmState(null);
+          return;
+        }
+        applyMutation(_ => restored);
+        setCurrentId(backup.data.currentId || restored[0].id);
+        setConfirmState(null);
+        setBackupsOpen(false);
+        setToast(`✓ Backup del ${new Date(backup.ts).toLocaleString('it-IT')} ripristinato`);
+      }
+    });
+  };
+
   const handlePrint = () => { setView('preview'); setTimeout(() => window.print(), 250); };
 
   // PDF: ora vettoriale (Punti 19 + 21)
@@ -3173,14 +3730,14 @@ function App() {
     await preloadOpenmoji(uniqueEmojis, 6);
     await new Promise(r => setTimeout(r, 500)); // attendi rendering React
     try {
-      const { blob, scale } = await exportPNGSized(currentProject);
+      const { blob, scale, withBackup } = await exportPNGWithBackup(currentProject);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${currentProject.title.replace(/[^a-z0-9]/gi, '_')}.png`;
       a.click();
       URL.revokeObjectURL(url);
-      setToast(`🖼 PNG scaricato (scala ${scale}×, ${(blob.size/1024).toFixed(0)} KB)`);
+      setToast(`🖼 PNG scaricato (scala ${scale}×, ${(blob.size/1024).toFixed(0)} KB${withBackup ? ', con backup ricaricabile' : ''})`);
     } catch (err) {
       console.error(err);
       setToast('❌ Errore esportazione PNG');
@@ -3231,9 +3788,12 @@ function App() {
             <button className="btn btn-icon btn-secondary" onClick={undo} disabled={!canUndo} title="Annulla (Ctrl+Z)" aria-label="Annulla">↶</button>
             <button className="btn btn-icon btn-secondary" onClick={redo} disabled={!canRedo} title="Ripeti (Ctrl+Y)" aria-label="Ripeti">↷</button>
           </div>
-          <button className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} title="Importa">📥 Importa</button>
+          <button className="btn btn-secondary btn-small" onClick={() => recoverInputRef.current?.click()} title="Recupera da PDF/PPTX/PNG/JSON">📥 Recupera</button>
+          <input ref={recoverInputRef} type="file" accept=".pdf,.pptx,.png,.json,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,application/json" onChange={handleRecoverFromFile} style={{display: 'none'}} />
+          <button className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} title="Importa progetti da JSON">📋 Importa JSON</button>
           <input ref={fileInputRef} type="file" accept="application/json" onChange={importJSON} style={{display: 'none'}} />
-          <button className="btn btn-secondary btn-small" onClick={exportJSON} title="Backup JSON di tutti i progetti">💾 Backup</button>
+          <button className="btn btn-secondary btn-small" onClick={() => setBackupsOpen(true)} title="Backup automatici in locale">⏱ Snapshot</button>
+          <button className="btn btn-secondary btn-small" onClick={exportJSON} title="Esporta backup JSON di tutti i progetti">💾 Esporta</button>
         </div>
       </header>
 
@@ -3307,7 +3867,11 @@ function App() {
               </div>
             )}
             <div className="help-tip" style={{marginTop: 16}}>
-              💡 I tuoi progetti sono salvati automaticamente nel browser (con un breve ritardo per non rallentare la digitazione). Per portarli su un altro dispositivo usa <strong>💾 Backup</strong>.
+              💡 <strong>Triplo livello di sicurezza per i tuoi dati:</strong>
+              <br/>① Salvataggio automatico (browser, ~300 ms)
+              <br/>② <strong>⏱ Snapshot</strong>: 10 backup rotativi in locale (clicca per ripristinarli)
+              <br/>③ Ogni PDF/PPTX/PNG che esporti contiene il backup completo del progetto: ricarica il file con <strong>📥 Recupera</strong> per ricostruire l'editing
+              <br/>Per backup esterno (Drive, email...) usa <strong>💾 Esporta</strong>.
               <br/>⌨️ Scorciatoie: <kbd>Ctrl+Z</kbd> annulla, <kbd>Ctrl+Y</kbd> ripeti, <kbd>Esc</kbd> chiude i pannelli.
             </div>
           </div>
@@ -3425,6 +3989,12 @@ function App() {
         onClose={() => setImportOpen(false)}
         onAddNucleus={appendNucleus}
         projectNucleiCount={currentProject?.nuclei.length || 0}
+      />
+
+      <BackupsModal
+        open={backupsOpen}
+        onClose={() => setBackupsOpen(false)}
+        onRestore={handleRestoreBackup}
       />
 
       <ConfirmDialog
