@@ -9,7 +9,18 @@
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Versione pinnata: evita rotture future della CDN. -->
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script>
+  // Forza il "classic JSX runtime" del preset React. Senza questo, Babel >= 7.20
+  // emette `import { jsx } from "react/jsx-runtime"` che in uno script non-module
+  // genera un SyntaxError silenzioso e React non monta.
+  if (window.Babel) {
+    Babel.registerPreset('react-classic', {
+      presets: [[Babel.availablePresets.react, { runtime: 'classic' }]]
+    });
+  }
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -556,7 +567,7 @@
 <body>
 <div id="app"></div>
 
-<script type="text/babel" data-presets="react">
+<script type="text/babel" data-presets="react-classic">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 /* ════════════════════════════════════════════════════════════
